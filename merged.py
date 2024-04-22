@@ -21,6 +21,7 @@ import csv
 from pptx import Presentation
 import docx
 from dateutil.relativedelta import relativedelta
+from openai import AzureOpenAI
 
 from functions_json import functions
 from functions_python import *
@@ -32,19 +33,20 @@ messages = []
 
 class FileProcessor:
     def __init__(self):
-        pass
+        self.openai_api_key = config.openai_api_key
+        self.client = AzureOpenAI(
+            api_key=config.azure_api_key,
+            api_version=config.azure_api_version,
+            azure_endpoint=config.azure_api_endpoint
+            )
 
     def chat_with_ai(self, messages: list, content: str):
         # try:
             if not content:
                 return ""
             
-            api_key = config.api_key
-            client = OpenAI(api_key=api_key)
-            GPT_MODEL_3 = "gpt-3.5-turbo-1106"
-            
             def get_response(messages, functions, model, function_call):
-                response = client.chat.completions.create(
+                response = self.client.chat.completions.create(
                     model=model, messages=messages, functions=functions, function_call=function_call)
                 return response
             
@@ -102,7 +104,7 @@ class FileProcessor:
                         trend = FC.detect_trend(parameters=function_arguments)
                         messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
                         chat_response = get_response(
-                            messages, functions, GPT_MODEL_3, "auto"
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
                         assistant_message = chat_response.choices[0].message
                         messages.append(assistant_message)
@@ -120,7 +122,7 @@ class FileProcessor:
                         sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
                         messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Now generate a proper response"})
                         chat_response = get_response(
-                            messages, functions, GPT_MODEL_3, "auto"
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
                         results = chat_response.choices[0].message.content
                     
@@ -132,7 +134,7 @@ class FileProcessor:
             
             messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
             messages.append({"role": "user", "content": content})
-            response = get_response(messages, functions, GPT_MODEL_3, "auto")
+            response = get_response(messages, functions, config.azure_GPT_MODEL_3, "auto")
             res = get_result(messages, response)
             return res
         
@@ -143,7 +145,6 @@ class FileProcessor:
         try:
             print("Image file detected. VisionGPT processing...")
             # OpenAI API Key
-            api_key = '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'
             # Perform VisionGPT processing here
             def encode_image(file_path):
                 with open(file_path, "rb") as image_file:
@@ -154,7 +155,7 @@ class FileProcessor:
 
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
+                "Authorization": f"Bearer {self.openai_api_key}"
             }
 
             payload = {
@@ -258,10 +259,9 @@ class FileProcessor:
     def speech_process(self, file_path: str) -> str:
         try:
             print("Speech file detected. Processing speech...")
-            os.environ['OPENAI_API_KEY'] = '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'
-            client = OpenAI()
+            os.environ['OPENAI_API_KEY'] = self.openai_api_key
             speech= open(file_path, "rb")
-            transcription = client.audio.transcriptions.create(
+            transcription = self.client.audio.transcriptions.create(
                 model="whisper-1",
                 file= speech)
             speech_contents = transcription.text
@@ -349,10 +349,7 @@ class FileProcessor:
         return self.chat_with_ai(messages=messages,content=content.strip())
 
 
-# # Testing
-# import json
-
-
+# # testing
 # prompts = [
 #     # detect_trend
 #     "What is the trend of NQ stock from 3/10/2023 15:45:30 until 3/11/2023 15:45:30?",
@@ -366,13 +363,22 @@ class FileProcessor:
 #     "Calculate Support and Resistance Levels based on YM by looking back up to past 10 days and timeframe of 1 hour.",
 #     "How much is the sr of CL for the past week?"
 # ]
+
+# # saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt
 # results = {}
 
-# llm = FileProcessor()
-# for prompt in prompts:
-#     result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
-#     print(f"{prompt}    =>    {result}")
-#     results[prompt]=result
+# # getting the answer of the prompts
+# try:
+#     llm = FileProcessor()
+#     for prompt in prompts:
+#         result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
+#         print(f"{prompt}    =>    {result}")
+#         results[prompt]=result
 
-# with open("test_results.json", "w") as outfile: 
-#     json.dump(results, outfile)
+# except Exception as e:
+#     print(f"The following exception occured:\n{e}")
+
+# finally:
+#     # saving the answers
+#     with open("test_results.json", "w") as outfile: 
+#         json.dump(results, outfile)

@@ -627,7 +627,7 @@ def find_trend(data_dict, data_index, start_index, end_index):
 
 class FunctionCalls:
     def __init__(self):
-        url = 'http://localhost:8086'
+        url = 'http://73.241.173.17:8086'
         token = 'WrSMwFo5b-ngd_gMqp1ZjGijae9QtQRKlNXd9U_8ExvcY0oVjQjZ7-dtmruJX_joU_pMzH72YUibcOX7XrvbBw=='
         org = 'TenSurf'
         self.bronze_client = InfluxClient(token, org, url, 'bronze')
