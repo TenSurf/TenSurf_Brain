@@ -22,9 +22,9 @@ from pptx import Presentation
 import docx
 from dateutil.relativedelta import relativedelta
 
-from chat.gpt.functions_json import functions
-from chat.gpt.functions_python import *
-from chat.gpt.utils import date_validation, monthdelta
+from gpt.functions_json import functions
+from gpt.functions_python import *
+from gpt.utils import date_validation, monthdelta
 from io import BufferedReader, StringIO
 
 

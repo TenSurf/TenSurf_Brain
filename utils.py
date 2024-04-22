@@ -2,8 +2,8 @@ import logging
 import requests
 import json
 from openai import OpenAI
-from functions_python import FunctionCalls
-from functions_json import functions
+from gpt.functions_python import FunctionCalls
+from gpt.functions_json import functions
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
