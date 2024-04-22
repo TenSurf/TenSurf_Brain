@@ -627,7 +627,7 @@ def find_trend(data_dict, data_index, start_index, end_index):
 
 class FunctionCalls:
     def __init__(self):
-        url = 'http://localhost:8086'
+        url = 'http://73.241.173.17:8086'
         token = 'WrSMwFo5b-ngd_gMqp1ZjGijae9QtQRKlNXd9U_8ExvcY0oVjQjZ7-dtmruJX_joU_pMzH72YUibcOX7XrvbBw=='
         org = 'TenSurf'
         self.bronze_client = InfluxClient(token, org, url, 'bronze')
@@ -636,9 +636,12 @@ class FunctionCalls:
         #trends range are in [-3,3]
         #-3 represents a strong downtrend, -2: moderate downtrend, -1: weak downtrend, 0: neutral, 
         #1: weak uptrend, 2: moderate uptrend, and 3: strong uptrend.
+        
+        # getting parameters
         symbol = parameters["symbol"]
         start_datetime = parameters["start_datetime"]
         end_datetime = parameters["end_datetime"]
+        
         if end_datetime is None:
             end_datetime = datetime.now()
         if start_datetime is None:
@@ -653,13 +656,15 @@ class FunctionCalls:
             return 0
         else:
             data_dict = df.to_dict(orient='list')
-            data_index = data_dict['DateTime']
+            data_index = data_dict['_time']
             return find_trend(data_dict, data_index, 0, len(data_index)  - 1)
 
     def calculate_sr(self, parameters):
+        # getting parameters
         symbol = parameters["symbol"]
         timeframe = parameters["timeframe"]
         lookback_days = int(parameters["lookback_days"].split(" ")[0])
+        
         end_datetime = datetime.now()
         start_datetime =  end_datetime - timedelta(days=lookback_days)
         df = self.bronze_client.retrieve_db_df_between(symbol, start_datetime, end_datetime)
@@ -677,86 +682,3 @@ class FunctionCalls:
         end_datetimes = [df.index[-1]]*len(levels)
         scores = [detector.lines[x]['importance'] for x in levels]
         return [levels, start_times, end_datetimes, scores]
-
-    def stop_loss_suggestions(self, parameters):
-        '''
-        This function calculates stoploss based on symbol name and direction of position which is one of -1 and 1.
-        '''
-        symbol = parameters["symbol"]
-        direction = parameters["direction"]
-
-        end_datetime = datetime.now()
-        start_datetime =  end_datetime - timedelta(days=4)
-        df = self.bronze_client.retrieve_db_df_between(symbol, start_datetime, end_datetime)
-        if df is None or len(df) == 0:
-            print('There is no data for this period of time...')
-            return {}
-        df = df.iloc[-23 * 60 :] #Approximately last one day
-        data_dict = df.to_dict(orient='list')
-        data_index = data_dict['DateTime']
-        atr = data_dict['ATR'][-1]
-        stop_loss, take_profit = 0, 0
-        current_index = len(data_dict['close']) - 1
-        fill_price = data_dict['close'][current_index]
-        neighborhood = 20
-        pivot_param = .0004
-        sl_lookback = 100
-        ################################################################################################################################
-        stoploss = {}
-        if direction == 1:
-            data = np.array(data_dict['low'])
-            condition = -direction
-            pivots = peak_valley_pivots(data, pivot_param, -pivot_param)
-            if np.sum(pivots == condition):
-                potential = [x for x in data[np.where(pivots == -1)[0]] if x < fill_price]
-                if len(potential) > 0:
-                    stoploss['pivot'] = potential[-1]
-                else:
-                    stoploss['pivot'] = None
-            else:
-                stoploss['pivot'] = None
-            # swing method
-            swing_indices = argrelextrema(data, lambda x, y: x < y, order=neighborhood, mode='clip')[0]
-            if len(swing_indices) and swing_indices[0] < neighborhood:
-                swing_indices = swing_indices[1:]
-            if len(swing_indices) and swing_indices[-1] > len(data) - neighborhood // 2:
-                swing_indices = swing_indices[:-1]
-            for x in swing_indices[::-1]:
-                if data[x] < fill_price:
-                    stoploss['swing'] = data[x]
-                    break
-            else:
-                stoploss['swing'] = None
-
-            stoploss['min_max'] = min(data_dict['low'][- sl_lookback:])
-            stoploss['atr'] = fill_price - 1.5 * atr
-
-        elif direction == -1:
-            data = np.array(data_dict['high'])
-            condition = -direction
-            pivots = peak_valley_pivots(data, pivot_param, -pivot_param)
-            if np.sum(pivots == condition):
-                potential = [x for x in data[np.where(pivots == -1)[0]] if x > fill_price]
-                if len(potential) > 0:
-                    stoploss['pivot'] = potential[-1]
-                else:
-                    stoploss['pivot'] = None
-            else:
-                stoploss['pivot'] = None
-            # swing method
-            swing_indices = argrelextrema(data, lambda x, y: x > y, order=neighborhood, mode='clip')[0]
-            if len(swing_indices) and swing_indices[0] < neighborhood:
-                swing_indices = swing_indices[1:]
-            if len(swing_indices) and swing_indices[-1] > len(data) - neighborhood // 2:
-                swing_indices = swing_indices[:-1]
-            for x in swing_indices[::-1]:
-                if data[x] > fill_price:
-                    stoploss['swing'] = data[x]
-                    break
-            else:
-                stoploss['swing'] = None
-
-            stoploss['min_max'] = max(data_dict['low'][-sl_lookback:])
-            stoploss['atr'] = fill_price + 1.5 * atr
-
-        return stoploss

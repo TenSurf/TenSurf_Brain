@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1o_VWgXzFbICtCyLz76eeH1LYy6A6tZWF
 """
 
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 import PyPDF2
 import os
 from typing import Optional
@@ -22,26 +22,36 @@ from pptx import Presentation
 import docx
 from dateutil.relativedelta import relativedelta
 
-from functions_json import functions
-from functions_python import *
-from utils import date_validation, monthdelta
-import config
-
-messages = []
+from chat.gpt.functions_json import functions
+from chat.gpt.functions_python import *
+from chat.gpt.utils import date_validation, monthdelta
+from io import BufferedReader, StringIO
 
 
 class FileProcessor:
     def __init__(self):
         pass
 
-    def chat_with_ai(self, messages: list, content: str):
+    def chat_with_ai(self, messages: list, content: str, api_name: str):
         # try:
             if not content:
                 return ""
             
-            api_key = config.api_key
-            client = OpenAI(api_key=api_key)
-            GPT_MODEL_3 = "gpt-3.5-turbo-1106"
+            if api_name == 'openai':
+              api_key = "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"
+              client = OpenAI(api_key=api_key)
+              GPT_MODEL_3 = "gpt-3.5-turbo-1106"
+            elif (not api_name) or (api_name == 'azureopenai'):
+              api_type = "azure"
+              api_endpoint = 'https://tensurf.openai.azure.com/'
+              api_version = '2023-10-01-preview'
+              api_key = '74b3de375b964f73a6b7668fe459e26f'
+              client = AzureOpenAI(
+                api_key= api_key,
+                api_version= api_version,
+                azure_endpoint= api_endpoint
+                )
+              GPT_MODEL_3 = "gpt_35"
             
             def get_response(messages, functions, model, function_call):
                 response = client.chat.completions.create(
@@ -139,18 +149,16 @@ class FileProcessor:
         # except Exception as e:
         #     print(f"An error occurred while chatting with AI, please try again with: {e}")
 
-    def image_process(self, file_path: str) -> str:
+    def image_process(self, file) -> str:
         try:
             print("Image file detected. VisionGPT processing...")
             # OpenAI API Key
-            api_key = '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'
+            api_key = os.environ.get("OPENAI_API_KEY")
             # Perform VisionGPT processing here
-            def encode_image(file_path):
-                with open(file_path, "rb") as image_file:
-                    return base64.b64encode(image_file.read()).decode('utf-8')
+            def encode_image(file):
+                return base64.b64encode(file.read()).decode('utf-8')
 
-            image_path = file_path
-            base64_image = encode_image(image_path)
+            base64_image = encode_image(file)
 
             headers = {
                 "Content-Type": "application/json",
@@ -189,35 +197,33 @@ class FileProcessor:
             print(f"An error occurred while processing the image: {e}")
             return ""
 
-    def pdf_process(self, file_path: str) -> str:
+    def pdf_process(self, file) -> str:
         try:
             print("PDF file detected. Extracting text...")
-            with open(file_path, 'rb') as file:
-                pdf = PyPDF2.PdfReader(file)
-                file_contents = ''
-                for page in range(len(pdf.pages)):
-                    file_contents += pdf.pages[page].extract_text()
+            pdf = PyPDF2.PdfReader(file)
+            file_contents = ''
+            for page in range(len(pdf.pages)):
+                file_contents += pdf.pages[page].extract_text()
             print("Extraction complete.")
             return file_contents
         except Exception as e:
             print(f"An error occurred while processing the PDF: {e}")
             return ""
 
-    def text_process(self, file_path: str) -> str:
+    def text_process(self, file) -> str:
         try:
             print("Text file detected. Extracting text...")
-            with open(file_path, 'r') as file:
-                file_contents = file.read()
+            file_contents = file.read().decode('utf-8')
             print("Extraction complete.")
             return file_contents
         except Exception as e:
             print(f"An error occurred while processing the text file: {e}")
             return ""
 
-    def word_process(self, file_path: str) -> str:
+    def word_process(self, file) -> str:
         try:
             print("Word document detected. Extracting text...")
-            doc = docx.Document(file_path)
+            doc = docx.Document(file)
             file_contents = '\n'.join([para.text for para in doc.paragraphs])
             print("Extraction complete.")
             return file_contents
@@ -225,11 +231,11 @@ class FileProcessor:
             print(f"An error occurred while processing the Word document: {e}")
             return ""
 
-    def powerpoint_process(self, file_path: str) -> str:
+    def powerpoint_process(self, file) -> str:
         try:
             print("Powerpoint document detected. Extracting text...")
             # Load the PowerPoint presentation
-            prs = Presentation(file_path)
+            prs = Presentation(file)
             # Initialize an empty list to store the extracted lines of text
             extracted_lines = []
             # Iterate through each slide in the presentation
@@ -255,15 +261,13 @@ class FileProcessor:
             print(f"An error occurred while processing the PowerPoint file: {e}")
             return ""
 
-    def speech_process(self, file_path: str) -> str:
+    def speech_process(self, speech) -> str:
         try:
             print("Speech file detected. Processing speech...")
-            os.environ['OPENAI_API_KEY'] = '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'
             client = OpenAI()
-            speech= open(file_path, "rb")
             transcription = client.audio.transcriptions.create(
                 model="whisper-1",
-                file= speech)
+                file= BufferedReader(speech))
             speech_contents = transcription.text
             print("Speech processing complete.")
             return speech_contents
@@ -271,10 +275,10 @@ class FileProcessor:
             print(f"An error occurred while processing the speech file: {e}")
             return ""
 
-    def excel_process(self, file_path: str) -> str:
+    def excel_process(self, file) -> str:
         try:
             print("Excel file detected. Extracting text...")
-            wb = load_workbook(file_path)
+            wb = load_workbook(file)
             file_contents = '\n'.join([str(cell.value) for sheet in wb.sheetnames for row in wb[sheet].iter_rows() for cell in row if cell.value is not None])
             print("Extraction complete.")
             return file_contents
@@ -282,45 +286,44 @@ class FileProcessor:
             print(f"An error occurred while processing the Excel file: {e}")
             return ""
 
-    def csv_process(self, file_path: str) -> str:
+    def csv_process(self, file) -> str:
         try:
             print("CSV file detected. Extracting text...")
-            with open(file_path, 'r', newline='', encoding='utf-8') as file:
-                csv_reader = csv.reader(file)
-                file_contents = '\n'.join(','.join(row) for row in csv_reader)
+            csv_reader = csv.reader(StringIO(file.read().decode('utf-8')))
+            file_contents = '\n'.join(','.join(row) for row in csv_reader)
             print("Extraction complete.")
             return file_contents
         except Exception as e:
             print(f"An error occurred while processing the CSV file: {e}")
             return ""
 
-    def process_file(self, file_path: str) -> str:
+    def process_file(self, file) -> str:
         try:
-            _, file_extension = os.path.splitext(file_path)
+            _, file_extension = os.path.splitext(file.name)
 
             if file_extension.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff']:
-                return self.image_process(file_path)
+                return self.image_process(file)
 
             elif file_extension.lower() == '.pdf':
-                return self.pdf_process(file_path)
+                return self.pdf_process(file)
 
             elif file_extension.lower() == '.txt':
-                return self.text_process(file_path)
+                return self.text_process(file)
 
             elif file_extension.lower() == '.docx':
-                return self.word_process(file_path)
+                return self.word_process(file)
 
             elif file_extension.lower() in ['.pptx', '.ppt']:
-                return self.powerpoint_process(file_path)
+                return self.powerpoint_process(file)
 
             elif file_extension.lower() == '.mp3':
-                return self.speech_process(file_path)
+                return self.speech_process(file)
 
             elif file_extension.lower() == '.csv':
-                return self.csv_process(file_path)
+                return self.csv_process(file)
 
             elif file_extension.lower() == '.xlsx':
-                return self.excel_process(file_path)
+                return self.excel_process(file)
 
             else:
                 raise ValueError("Unsupported file format. Please provide an image, PDF, PPT, TXT, DOCX, MP3, XLSX, or other supported file format.")
@@ -328,51 +331,22 @@ class FileProcessor:
             print(f"An error occurred while processing the file: {e}")
             return ""
 
-    def get_content(self, file_path: Optional[str]) -> str:
+    def get_content(self, file) -> str:
         content = ""
         try:
-            if file_path:
-                file_content = self.process_file(file_path)
+            if file:
+                file_content = self.process_file(file)
                 content += file_content + "\n"
         except Exception as e:
             print(f"An error occurred while getting content: {e}")
         return content.strip()
 
-    def get_user_input(self, file_path: Optional[str], prompt: Optional[str], messages: Optional[list]) -> str:
+    def get_user_input(self, file, prompt: Optional[str], messages: Optional[list], api_name: str = None) -> str:
         content = ""
-        if file_path:
-            file_content = self.get_content(file_path)
+        if file:
+            file_content = self.get_content(file)
             if file_content:
                 content += file_content + "\n"
         if prompt:
             content += prompt + "\n"
-        return self.chat_with_ai(messages=messages,content=content.strip())
-
-
-# # Testing
-# import json
-
-
-# prompts = [
-#     # detect_trend
-#     "What is the trend of NQ stock from 3/10/2023 15:45:30 until 3/11/2023 15:45:30?",
-#     "What is the trend of NQ stock for the past week?",
-#     "What is the trend of NQ?",
-#     "What is the trend?",
-#     "Show me the trend of ES from 2024-03-25 11:12:17 to 2024-04-01 9:31:23.",
-#     "Trend of GC, 2024-03-25 11:12:17 to 2024-04-01 9:31:23",
-#     "Trend of GC, past 2 hours",
-#     # calculate_sr
-#     "Calculate Support and Resistance Levels based on YM by looking back up to past 10 days and timeframe of 1 hour.",
-#     "How much is the sr of CL for the past week?"
-# ]
-# results = {}
-
-# llm = FileProcessor()
-# for prompt in prompts:
-#     result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
-#     print(f"{prompt}    =>    {result}")
-#     results[prompt]=result
-
-# with open("test_results.json", "w") as outfile: 
-#     json.dump(results, outfile)
+        return self.chat_with_ai(messages=messages,content=content.strip(), api_name=api_name)
