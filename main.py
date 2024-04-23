@@ -29,4 +29,4 @@ demo = gr.ChatInterface(
 
 
 if __name__ == "__main__":
-    demo.launch(debug=True, server_port=8081, share_server_protocol="http")
+    demo.launch(debug=True, server_port=8081, share_server_protocol="http", root_path="/api/v1")

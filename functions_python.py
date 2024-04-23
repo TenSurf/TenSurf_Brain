@@ -55,9 +55,9 @@ class InfluxClient:
         end_date = convert_datetime(end_date)
 
         query = f'''from(bucket:"{self.bucket}") 
-                |> range(start: time(v:{start_date}), stop: time(v: {end_date}))
-                |> filter(fn: (r) => r["_measurement"] == "{symbol}" and\
-                    r["timeframe"] == "1min" and\
+                |> range(start: {start_date}, stop: {end_date})
+                |> filter(fn: (r) => r["_measurement"] == "{symbol}" and
+                    r["timeframe"] == "1min" and
                     r["liq_threshold"] == "-1")
                 |> pivot(rowKey:["_time"], columnKey:["_field"], valueColumn:"_value")
                 '''
@@ -65,21 +65,12 @@ class InfluxClient:
 
     def read_data(self, query):
         try:
-            result_ = self.client.query_api().query(query=query)
-            records = []
-            for table in result_:
-                for record in table.records:
-                    records.append(record.values)
-
-            result = pd.DataFrame(records)
+            result = self.client.query_api().query_data_frame(query=query)
+            
             if isinstance(result, pd.DataFrame) and all(col in result.columns for col in
                                                         ['_time', 'result', 'table', '_start', '_stop', '_measurement',
                                                          'liq_threshold', 'timeframe']):
-                df = result.drop(columns={'_time', 'result', 'table', '_start', '_stop', '_measurement', 'liq_threshold',
-                             'timeframe'})
-                df['DateTime'] = pd.to_datetime(df['DateTime'])
-                if 'BarPeriod' in df.columns:
-                    df['BarPeriod'] = pd.to_datetime(df['BarPeriod'])
+                df = result.drop(columns={'result', 'table', '_start', '_stop', '_measurement', 'liq_threshold'})
                 self.client.close()
                 df = df.rename(columns={k: v for k, v in self.column_convertor.items() if k in df.columns})
                 return df
@@ -87,8 +78,47 @@ class InfluxClient:
                 print(query)
                 print('[Error] result output is not DataFrame')
         except Exception as e:
-                #self.send_error_email(f'InfluxDB - Error reading data from InfluxDB', e)
             print(f"Error reading data from InfluxDB: {e}\n Query is {query}")
+
+    # def retrieve_db_df_between(self, symbol, start_date, end_date):
+    #     start_date = convert_datetime(start_date)
+    #     end_date = convert_datetime(end_date)
+
+    #     query = f'''from(bucket:"{self.bucket}") 
+    #             |> range(start: time(v:{start_date}), stop: time(v: {end_date}))
+    #             |> filter(fn: (r) => r["_measurement"] == "{symbol}" and\
+    #                 r["timeframe"] == "1min" and\
+    #                 r["liq_threshold"] == "-1")
+    #             |> pivot(rowKey:["_time"], columnKey:["_field"], valueColumn:"_value")
+    #             '''
+    #     return self.read_data(query)
+
+    # def read_data(self, query):
+    #     try:
+    #         result_ = self.client.query_api().query(query=query)
+    #         records = []
+    #         for table in result_:
+    #             for record in table.records:
+    #                 records.append(record.values)
+
+    #         result = pd.DataFrame(records)
+    #         if isinstance(result, pd.DataFrame) and all(col in result.columns for col in
+    #                                                     ['_time', 'result', 'table', '_start', '_stop', '_measurement',
+    #                                                      'liq_threshold', 'timeframe']):
+    #             df = result.drop(columns={'_time', 'result', 'table', '_start', '_stop', '_measurement', 'liq_threshold',
+    #                          'timeframe'})
+    #             df['DateTime'] = pd.to_datetime(df['DateTime'])
+    #             if 'BarPeriod' in df.columns:
+    #                 df['BarPeriod'] = pd.to_datetime(df['BarPeriod'])
+    #             self.client.close()
+    #             df = df.rename(columns={k: v for k, v in self.column_convertor.items() if k in df.columns})
+    #             return df
+    #         else:
+    #             print(query)
+    #             print('[Error] result output is not DataFrame')
+    #     except Exception as e:
+    #             #self.send_error_email(f'InfluxDB - Error reading data from InfluxDB', e)
+    #         print(f"Error reading data from InfluxDB: {e}\n Query is {query}")
 
 
 class SRDetector:
