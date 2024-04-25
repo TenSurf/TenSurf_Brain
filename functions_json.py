@@ -1,5 +1,4 @@
 functions = [
-    
     ######### Trend Detection #########
     {
         "name": "detect_trend",
@@ -39,8 +38,41 @@ A number between -3 and 3 that represents the trend’s intensity and direction.
             "required": []
         }
     },
-
-
+    
+    ######### Visualize Data #########
+        {
+        "name": "visualize_data",
+        "description": "This function retrieves real-time or historical data from the Polygon API and generates a visual representation.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "ticker": {
+                    "type": "string",
+                    "description": '''TThe ticker symbol of the stock, such as AAPL, representing the specific company's stock data to retrieve.'''
+                },
+                "timeframe": {
+                    "type": "string",
+                    "description": '''The timeframe of data to retrieve, such as 'day', 'hour', or 'minute', indicating the granularity of the data interval.'''
+                },
+                "start_datetime_str": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": '''The start datetime for historical data retrieval, formatted as 'YYYY-MM-DDTHH:MM:SS', specifying the beginning timestamp of the data range.'''
+                },
+                "end_datetime_str": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": '''The end datetime for historical data retrieval, formatted as 'YYYY-MM-DDTHH:MM:SS', indicating the end timestamp of the data range.'''
+                },
+                "data_type": {
+                    "type": "string",
+                    "enum": ["realtime", "historical"],
+                    "description": '''Specify whether to fetch real-time or historical data. Choose from 'realtime' for current data or 'historical' for past data.'''
+                }
+            },
+            "required": []
+        }
+    },
     ######### Calculate Support and Resistance Levels #########
     {
         "name": "calculate_sr",
