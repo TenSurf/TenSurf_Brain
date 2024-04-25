@@ -27,6 +27,7 @@ from functions_json import functions
 from functions_python import *
 from utils import date_validation, monthdelta
 import config
+from datetime import timezone
 
 messages = []
 
@@ -58,11 +59,17 @@ class FileProcessor:
                     results = f"{chat_response.choices[0].message.content}"
                 
                 else:
+                    # results = ""
+                    # if assistant_message.content != None:
+                    #     results = assistant_message.content + "\n"
                     function_name = chat_response.choices[0].message.function_call.name
                     function_arguments = json.loads(chat_response.choices[0].message.function_call.arguments)
+                    function_arguments["timezone"] = "30"
+                    k = int(function_arguments["timezone"])
                     FC = FunctionCalls()
                     print(f"\n{chat_response.choices[0].message}\n")
-                    now = datetime.now()
+                    now = datetime.now() - timedelta(minutes=k)
+                    
                     
                     if function_name == "detect_trend":
                         # correcting function_arguments
@@ -96,13 +103,21 @@ class FileProcessor:
                                     function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
                                 else:
                                     raise ValueError("???")
+                        
+                        # # setting the given time with the clock of the server
+                        # if "timezone" in function_arguments:
+                        #     k = int(function_arguments["timezone"])
+                        #     s = datetime(function_arguments["start_datetime"]) - timedelta(minutes=k)
+                        #     function_arguments["start_datetime"] = f"{s}"
+                        #     e = datetime(function_arguments["end_datetime"]) - timedelta(minutes=k)
+                        #     function_arguments["end_datetime"] = f"{e}"
 
                         # if the date formats were not valid
                         if not (date_validation(function_arguments["start_datetime"]) and date_validation(function_arguments["end_datetime"])):
                             results = "Please enter dates in the following foramat: YYYY-MM-DD or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
                         
                         trend = FC.detect_trend(parameters=function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should and introduce these parameters to them so that they can use them. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
                         chat_response = get_response(
                             messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
@@ -120,7 +135,7 @@ class FileProcessor:
                             function_arguments["lookback_days"] = "10 days"
 
                         sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Now generate a proper response"})
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
                         chat_response = get_response(
                             messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )

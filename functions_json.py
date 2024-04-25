@@ -68,10 +68,6 @@ Returns a dictionary containing four lists, each corresponding to a specific asp
                     "type": "integer",
                     "enum": ["days"],
                     "description": '''The number of days to look back for calculating the support and resistance levels. This parameter determines the depth of historical data to be considered in the analysis.'''
-                },
-                "reaction": {
-                    "type": "integer",
-                    "description": '''The number of times the price has reacted to that level'''
                 }
             },
             "required": []
