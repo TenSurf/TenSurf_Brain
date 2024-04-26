@@ -76,7 +76,6 @@ class InfluxClient:
                                                          'liq_threshold', 'timeframe']):
                 df = result.drop(columns={'result', 'table', '_start', '_stop', '_measurement', 'liq_threshold',
                              'timeframe'})
-                df['DateTime'] = pd.to_datetime(df['DateTime'])
                 if 'BarPeriod' in df.columns:
                     df['BarPeriod'] = pd.to_datetime(df['BarPeriod'])
                 self.client.close()
