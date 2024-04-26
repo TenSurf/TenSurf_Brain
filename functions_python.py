@@ -74,7 +74,7 @@ class InfluxClient:
             if isinstance(result, pd.DataFrame) and all(col in result.columns for col in
                                                         ['_time', 'result', 'table', '_start', '_stop', '_measurement',
                                                          'liq_threshold', 'timeframe']):
-                df = result.drop(columns={'_time', 'result', 'table', '_start', '_stop', '_measurement', 'liq_threshold',
+                df = result.drop(columns={'result', 'table', '_start', '_stop', '_measurement', 'liq_threshold',
                              'timeframe'})
                 df['DateTime'] = pd.to_datetime(df['DateTime'])
                 if 'BarPeriod' in df.columns:
