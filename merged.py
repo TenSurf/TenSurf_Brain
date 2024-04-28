@@ -48,7 +48,7 @@ class FileProcessor:
             
             def get_response(messages, functions, model, function_call):
                 response = self.client.chat.completions.create(
-                    model=model, messages=messages, functions=functions, function_call=function_call)
+                    model=model, messages=messages, functions=functions, function_call=function_call, temperature=0.2)
                 return response
             
             def get_result(messages, chat_response):
