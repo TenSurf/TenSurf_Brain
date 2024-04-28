@@ -1,15 +1,8 @@
 import gradio as gr
-import logging
-import merged
 from merged import *
+from utils import messages
+from config import *
 
-
-logging.basicConfig(filename="info.log",
-                    filemode='a',
-                    encoding='utf-8',
-                    format='%(asctime)s %(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S',
-                    level=logging.INFO)
 
 input_audio = gr.Audio(sources="microphone", show_download_button=True, type="filepath")
 
@@ -29,4 +22,4 @@ demo = gr.ChatInterface(
 
 
 if __name__ == "__main__":
-    demo.launch(debug=True, server_port=8081, share_server_protocol="http")
+    demo.launch(debug=True, server_port=8081, share_server_protocol="http", root_path="/api/v1")

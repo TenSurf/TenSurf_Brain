@@ -21,31 +21,34 @@ import csv
 from pptx import Presentation
 import docx
 from dateutil.relativedelta import relativedelta
+from openai import AzureOpenAI
 
 from functions_json import functions
-from functions_python import *
-from utils import date_validation, monthdelta
+from importnb import imports
+with imports("ipynb"):
+    import functions_python
+from utils import date_validation, monthdelta, messages
 import config
-
-messages = []
+from datetime import timezone
 
 
 class FileProcessor:
     def __init__(self):
-        pass
+        self.openai_api_key = config.openai_api_key
+        self.client = AzureOpenAI(
+            api_key=config.azure_api_key,
+            api_version=config.azure_api_version,
+            azure_endpoint=config.azure_api_endpoint
+            )
 
     def chat_with_ai(self, messages: list, content: str):
         # try:
             if not content:
                 return ""
             
-            api_key = config.api_key
-            client = OpenAI(api_key=api_key)
-            GPT_MODEL_3 = "gpt-3.5-turbo-1106"
-            
             def get_response(messages, functions, model, function_call):
-                response = client.chat.completions.create(
-                    model=model, messages=messages, functions=functions, function_call=function_call)
+                response = self.client.chat.completions.create(
+                    model=model, messages=messages, functions=functions, function_call=function_call, temperature=0.2)
                 return response
             
             def get_result(messages, chat_response):
@@ -56,12 +59,17 @@ class FileProcessor:
                     results = f"{chat_response.choices[0].message.content}"
                 
                 else:
+                    # results = ""
+                    # if assistant_message.content != None:
+                    #     results = assistant_message.content + "\n"
                     function_name = chat_response.choices[0].message.function_call.name
                     function_arguments = json.loads(chat_response.choices[0].message.function_call.arguments)
-                    FC = FunctionCalls()
+                    function_arguments["timezone"] = "30"
+                    k = int(function_arguments["timezone"])
+                    FC = functions_python.FunctionCalls()
                     print(f"\n{chat_response.choices[0].message}\n")
-                    now = datetime.now()
-                    
+                    now = functions_python.datetime.now() - functions_python.timedelta(minutes=k)
+
                     if function_name == "detect_trend":
                         # correcting function_arguments
                         if "lookback" not in function_arguments:
@@ -93,21 +101,21 @@ class FileProcessor:
                                 elif function_arguments["lookback"].split(" ")[-1] == "years" or function_arguments["lookback"].split(" ")[-1] == "year":
                                     function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
                                 else:
-                                    raise ValueError("???")
+                                    raise ValueError("wrong value of time")
 
                         # if the date formats were not valid
                         if not (date_validation(function_arguments["start_datetime"]) and date_validation(function_arguments["end_datetime"])):
                             results = "Please enter dates in the following foramat: YYYY-MM-DD or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
                         
                         trend = FC.detect_trend(parameters=function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should and introduce these parameters to them so that they can use them. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
                         chat_response = get_response(
-                            messages, functions, GPT_MODEL_3, "auto"
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
                         assistant_message = chat_response.choices[0].message
                         messages.append(assistant_message)
                         results = chat_response.choices[0].message.content
-                    
+
                     elif function_name == "calculate_sr":
                         # correcting function_arguments
                         if "symbol" not in function_arguments:
@@ -118,21 +126,36 @@ class FileProcessor:
                             function_arguments["lookback_days"] = "10 days"
 
                         sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Now generate a proper response"})
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. If the user didn't specified lookback_days or timeframe parameters, introduce these parameters to them so that they can use these parameters. Now generate a proper response"})
                         chat_response = get_response(
-                            messages, functions, GPT_MODEL_3, "auto"
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
                         results = chat_response.choices[0].message.content
-                    
+
+                    elif function_name == "calculate_sl":
+                        stoploss = FC.calculate_sl(function_arguments)
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {stoploss}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
+                        chat_response = get_response(
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        )
+                        results = chat_response.choices[0].message.content
+
+                    elif function_name == "calculate_tp":
+                        takeprofit = FC.calculate_tp(function_arguments)
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {takeprofit}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
+                        chat_response = get_response(
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        )
+                        results = chat_response.choices[0].message.content
+
                     else:
                         raise ValueError(f"{chat_response.choices[0].message}")
-                        # results = f"{chat_response.choices[0].message}"
-                
+                 
                 return results
             
             messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
             messages.append({"role": "user", "content": content})
-            response = get_response(messages, functions, GPT_MODEL_3, "auto")
+            response = get_response(messages, functions, config.azure_GPT_MODEL_3, "auto")
             res = get_result(messages, response)
             return res
         
@@ -143,7 +166,6 @@ class FileProcessor:
         try:
             print("Image file detected. VisionGPT processing...")
             # OpenAI API Key
-            api_key = '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'
             # Perform VisionGPT processing here
             def encode_image(file_path):
                 with open(file_path, "rb") as image_file:
@@ -154,7 +176,7 @@ class FileProcessor:
 
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
+                "Authorization": f"Bearer {self.openai_api_key}"
             }
 
             payload = {
@@ -258,10 +280,9 @@ class FileProcessor:
     def speech_process(self, file_path: str) -> str:
         try:
             print("Speech file detected. Processing speech...")
-            os.environ['OPENAI_API_KEY'] = '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'
-            client = OpenAI()
+            os.environ['OPENAI_API_KEY'] = self.openai_api_key
             speech= open(file_path, "rb")
-            transcription = client.audio.transcriptions.create(
+            transcription = self.client.audio.transcriptions.create(
                 model="whisper-1",
                 file= speech)
             speech_contents = transcription.text
@@ -349,30 +370,34 @@ class FileProcessor:
         return self.chat_with_ai(messages=messages,content=content.strip())
 
 
-# # Testing
-# import json
+# For Debugging
+prompts = [
+    # detect_trend
+    "What is the trend of NQ stock from 4/20/2024 15:45:30 until 4/27/2024 15:45:30?",
+    # calculate_sr
+    "Calculate Support and Resistance Levels based on ES by looking back up to past 10 days and timeframe of 1 hour.",
+    # calculate_sl
+    "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
+    # calculate_tp
+    "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
+]
 
+# saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt
+results = {}
+# from utils import messages
 
-# prompts = [
-#     # detect_trend
-#     "What is the trend of NQ stock from 3/10/2023 15:45:30 until 3/11/2023 15:45:30?",
-#     "What is the trend of NQ stock for the past week?",
-#     "What is the trend of NQ?",
-#     "What is the trend?",
-#     "Show me the trend of ES from 2024-03-25 11:12:17 to 2024-04-01 9:31:23.",
-#     "Trend of GC, 2024-03-25 11:12:17 to 2024-04-01 9:31:23",
-#     "Trend of GC, past 2 hours",
-#     # calculate_sr
-#     "Calculate Support and Resistance Levels based on YM by looking back up to past 10 days and timeframe of 1 hour.",
-#     "How much is the sr of CL for the past week?"
-# ]
-# results = {}
+# getting the answer of the prompts
+# try:
+llm = FileProcessor()
+for prompt in prompts:
+    result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
+    print(f"{prompt}    =>    {result}")
+    results[prompt]=result
 
-# llm = FileProcessor()
-# for prompt in prompts:
-#     result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
-#     print(f"{prompt}    =>    {result}")
-#     results[prompt]=result
+# except Exception as e:
+#     print(f"The following exception occured:\n{e}")
 
-# with open("test_results.json", "w") as outfile: 
-#     json.dump(results, outfile)
+# finally:
+#     # saving the answers
+#     with open("test_results.json", "w") as outfile: 
+#         json.dump(results, outfile)
