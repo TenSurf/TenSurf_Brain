@@ -7,3 +7,4 @@ scikit-learn
 openai
 zigzag
 PyPDF2
+importnb

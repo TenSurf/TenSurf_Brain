@@ -78,7 +78,30 @@ Returns a dictionary containing four lists, each corresponding to a specific asp
     ######### Stop Loss Calculation #########
     {
         "name": "calculate_sl",
-        "description": '''Identifying the optimal level for placing a stop-loss. Returns a dictionary same as this: \
+        "description": '''Identifying the optimal level for placing a stop-loss. \
+Here is a detailed explanation for each stop-loss (SL) suggestion method, considering the distinction between long and short positions: \
+1. **Swing Method**:In the Swing Method, the stop-loss (SL) calculation is based on recent high swings for short positions and low swings for long positions. The determination of these swings is influenced by the 'neighborhood' parameter, which specifies the range or proximity within which the swings are identified. Adjusting the 'neighborhood' parameter can impact how the swings are detected and consequently affect the SL levels suggested by this method. \
+2. **MinMax Method**: \
+   - For Long Position: The SL is determined based on the minimum of low candles within the lookback period ( lookback is a parameter). \
+   - For Short Position: The SL is calculated using the maximum of high candles within the specified lookback period. \
+3. **ATR Method**: \
+   - For Long Position: The SL is placed below the current price by a factor of the Average True Range (ATR) coefficient multiplied by the ATR value. \
+   - For Short Position: The SL is positioned above the current price by the ATR coefficient times the ATR value. \
+4. **DVWAP Band Method**: \
+   - For Long Position: If the price falls within a daily VWAP band (e.g., band 3), the stop-loss (SL) is positioned at the bottom of the previous daily VWAP level (bottom of band 2). \
+   - For Short Position: If the price falls within a daily VWAP band (e.g., band 2), the stop-loss (SL) is positioned at the topof the next daily VWAP level (top of band 3). \
+5. **WVWAP Band Method**: \
+   - For Long Position: Similar to DVWAP, the SL is set at the bottom of the previous weekly VWAP level. \
+   - For Short Position: The SL is positioned at the top of the next weekly VWAP level. \
+6. **Zigzag Method**: \
+   - For Long Position: The SL is calculated based on the average length of legs from the Zigzag indicator, below the current price. \
+   - For Short Position: The SL is set above the current price using the average Zigzag length. \
+7. **Level Method**: \
+   - For Long Position: SL levels are determined based on important price levels and support/resistance levels below the current price. \
+   - For Short Position: The SL is set using significant levels and support/resistance levels above the current price. \
+    Note: levels for this method are: \
+VP_POC, VP_VAL, VP_VAH, Overnight_high, Overnight_low, Overnight_mid, initial_balance_high, initial_balance_low, initial_balance_mid, prev_session_max, prev_session_min, prev_session_mid,  daily VWAP levels, weekly VWAP levels, and support/resistance levels from hourly, daily, and weekly timeframes. \
+Returns a dictionary same as this: \
 {'sl': [17542.5], 'risk': [268.5], 'info': ['calculated based on maximum high price of previous 100 candles']} \
 which includes sl value, risk on the trade and an information. \
 If user don't select any method for sl calculation or select "level" method, or zigzag method the output can include \
@@ -126,7 +149,9 @@ It includes a list of stoplosses and the risk on them and finally the level or m
     ######### Take-Profit Calculation #########
     {
         "name": "calculate_tp",
-        "description": '''Identifying the optimal level for placing a take-profit. Returns a list of price for take-profit and information for each price \
+        "description": '''Identifying the optimal level for placing a take-profit. \
+The take profit function takes into account the position type (long or short), symbol name (asset), and stop-loss (SL) value as inputs. Initially, the function calculates the risk associated with the trade. Subsequently, it identifies and outputs all price levels that are positioned above the current price for long positions, where the reward (distance to these levels from the current price) exceeds one unit of risk. For short positions, the function identifies levels below the current price that meet the same criteria. This approach ensures that potential profit-taking levels are strategically determined based on the risk-reward ratio, tailored to the specific trade conditions.  levels include: \
+VP_POC, VP_VAL, VP_VAH, Overnight_high, Overnight_low, Overnight_mid, initial_balance_high, initial_balance_low, initial_balance_mid, prev_session_max, prev_session_min, prev_session_mid, daily VWAP levels, weekly VWAP levels, and support/resistance levels from hourly, daily, and weekly timeframes. Returns a list of price for take-profit and information for each price \
 For exampe: {'tp': [5139.25, 5140.25, 5144.0], 'info': ['calculated based on the level VWAP_Top_Band_2', 'calculated based on the level Overnight_high', 'calculated based on the level VWAP_Top_Band_3']}''',
         "parameters": {
             "type": "object",
