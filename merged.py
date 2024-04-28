@@ -29,8 +29,6 @@ from utils import date_validation, monthdelta
 import config
 from datetime import timezone
 
-messages = []
-
 
 class FileProcessor:
     def __init__(self):
@@ -69,8 +67,7 @@ class FileProcessor:
                     FC = FunctionCalls()
                     print(f"\n{chat_response.choices[0].message}\n")
                     now = datetime.now() - timedelta(minutes=k)
-                    
-                    
+
                     if function_name == "detect_trend":
                         # correcting function_arguments
                         if "lookback" not in function_arguments:
@@ -102,15 +99,7 @@ class FileProcessor:
                                 elif function_arguments["lookback"].split(" ")[-1] == "years" or function_arguments["lookback"].split(" ")[-1] == "year":
                                     function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
                                 else:
-                                    raise ValueError("???")
-                        
-                        # # setting the given time with the clock of the server
-                        # if "timezone" in function_arguments:
-                        #     k = int(function_arguments["timezone"])
-                        #     s = datetime(function_arguments["start_datetime"]) - timedelta(minutes=k)
-                        #     function_arguments["start_datetime"] = f"{s}"
-                        #     e = datetime(function_arguments["end_datetime"]) - timedelta(minutes=k)
-                        #     function_arguments["end_datetime"] = f"{e}"
+                                    raise ValueError("wrong value of time")
 
                         # if the date formats were not valid
                         if not (date_validation(function_arguments["start_datetime"]) and date_validation(function_arguments["end_datetime"])):
@@ -124,7 +113,7 @@ class FileProcessor:
                         assistant_message = chat_response.choices[0].message
                         messages.append(assistant_message)
                         results = chat_response.choices[0].message.content
-                    
+
                     elif function_name == "calculate_sr":
                         # correcting function_arguments
                         if "symbol" not in function_arguments:
@@ -135,16 +124,31 @@ class FileProcessor:
                             function_arguments["lookback_days"] = "10 days"
 
                         sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. If the user didn't specified lookback_days or timeframe parameters, introduce these parameters to them so that they can use these parameters. Now generate a proper response"})
                         chat_response = get_response(
                             messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
                         results = chat_response.choices[0].message.content
-                    
+
+                    elif function_name == "calculate_sl":
+                        stoploss = FC.calculate_sl(function_arguments)
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {stoploss}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
+                        chat_response = get_response(
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        )
+                        results = chat_response.choices[0].message.content
+
+                    elif function_name == "calculate_tp":
+                        takeprofit = FC.calculate_tp(function_arguments)
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {takeprofit}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
+                        chat_response = get_response(
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        )
+                        results = chat_response.choices[0].message.content
+
                     else:
                         raise ValueError(f"{chat_response.choices[0].message}")
-                        # results = f"{chat_response.choices[0].message}"
-                
+                 
                 return results
             
             messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
@@ -364,31 +368,29 @@ class FileProcessor:
         return self.chat_with_ai(messages=messages,content=content.strip())
 
 
-# # testing
-# prompts = [
-#     # detect_trend
-#     "What is the trend of NQ stock from 3/10/2023 15:45:30 until 3/11/2023 15:45:30?",
-#     "What is the trend of NQ stock for the past week?",
-#     "What is the trend of NQ?",
-#     "What is the trend?",
-#     "Show me the trend of ES from 2024-03-25 11:12:17 to 2024-04-01 9:31:23.",
-#     "Trend of GC, 2024-03-25 11:12:17 to 2024-04-01 9:31:23",
-#     "Trend of GC, past 2 hours",
-#     # calculate_sr
-#     "Calculate Support and Resistance Levels based on YM by looking back up to past 10 days and timeframe of 1 hour.",
-#     "How much is the sr of CL for the past week?"
-# ]
+# For Debugging
+prompts = [
+    # detect_trend
+    "What is the trend of NQ stock from 3/10/2023 15:45:30 until 3/11/2023 15:45:30?",
+    # calculate_sr
+    "Calculate Support and Resistance Levels based on YM by looking back up to past 10 days and timeframe of 1 hour.",
+    # calculate_sl
+    "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
+    # calculate_tp
+    "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
+]
 
-# # saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt
+# saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt
 # results = {}
+from utils import messages
 
-# # getting the answer of the prompts
+# getting the answer of the prompts
 # try:
-#     llm = FileProcessor()
-#     for prompt in prompts:
-#         result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
-#         print(f"{prompt}    =>    {result}")
-#         results[prompt]=result
+llm = FileProcessor()
+for prompt in prompts:
+    result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
+    print(f"{prompt}    =>    {result}")
+    # results[prompt]=result
 
 # except Exception as e:
 #     print(f"The following exception occured:\n{e}")

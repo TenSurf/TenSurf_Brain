@@ -1,15 +1,8 @@
 import gradio as gr
-import logging
-import merged
 from merged import *
+from utils import messages
+from config import *
 
-
-logging.basicConfig(filename="info.log",
-                    filemode='a',
-                    encoding='utf-8',
-                    format='%(asctime)s %(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S',
-                    level=logging.INFO)
 
 input_audio = gr.Audio(sources="microphone", show_download_button=True, type="filepath")
 
