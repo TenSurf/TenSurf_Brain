@@ -3,9 +3,10 @@ functions = [
     ######### Trend Detection #########
     {
         "name": "detect_trend",
-        "description": "It is designed primarily for financial data analysis and to analyzes the trend of a specified financial instrument over a given time range , enabling users to gauge the general direction of a security or market index. \
-Either start_datetime along with end_datetime should be specified of lookback should be specified but both cases should not happen simultaneously. \
-A number between -3 and 3 that represents the trend’s intensity and direction. The value is interpreted as follows: \
+        "description": "Analyzes the trend of a specified financial instrument over a given time range. \
+It is designed primarily for financial data analysis, enabling users to gauge the general direction of a security or market index. \
+The function returns a numerical value that indicates the trend intensity and direction within the specified parameters. \
+Returns a number between -3 and 3 that represents the trend’s intensity and direction. The value is interpreted as follows: \
 \n -3: strong bearish (downward) trend \
 \n -2: moderate bearish (downward) trend \
 \n -1: mild bearish (downward) trend \
@@ -44,8 +45,8 @@ A number between -3 and 3 that represents the trend’s intensity and direction.
     ######### Calculate Support and Resistance Levels #########
     {
         "name": "calculate_sr",
-        "description": # "Identifying and scoring support and resistance levels in financial markets based on historical price data. \
-"Support and resistance levels are key concepts in technical analysis, representing price points on a chart where the odds favor a pause or reversal of a prevailing trend. \
+        "description": "Identifying and scoring support and resistance levels in financial markets based on historical price data. \
+Support and resistance levels are key concepts in technical analysis, representing price points on a chart where the odds favor a pause or reversal of a prevailing trend. \
 This function analyzes candlestick charts over a specified timeframe and lookback period to calculate these levels and their respective strengths. \
 Returns a dictionary containing four lists, each corresponding to a specific aspect of the calculated support and resistance levels: \
 1. levels_prices (list of floats): The prices at which support and resistance levels have been identified. \
@@ -78,7 +79,8 @@ Returns a dictionary containing four lists, each corresponding to a specific asp
     ######### Stop Loss Calculation #########
     {
         "name": "calculate_sl",
-        "description": '''Stoploss (SL) is a  limitation for potential losses in a position. It's below the current price for long position and above it for short position. Distance between the SL and current price is named risk value. This function calculates the SL based o some different methods. \
+        "description": '''Stoploss (SL) is a limitation for potential losses in a position. It's below the current price for long position and above it for short position. \
+Distance between the SL and current price is named risk value. This function calculates the SL based o some different methods. \
 Returns A dictionary same as this: \
 {'sl': [17542.5], 'risk': [268.5], 'info': ['calculated based on maximum high price of previous 100 candles']} \
 which includes sl value, risk on the trade and an information. \
@@ -96,7 +98,7 @@ It includes a list of stoplosses and the risk on them and finally the level or m
                 },
                 "method": {
                     "type": "string",
-                    "description": '''an string that shows the method of SL calculation''',
+                    "description": '''shows the method of SL calculation''',
                     "enum": ["swing", "minmax", "atr", "DVWAP_band", "WVWAP_band", "level"]
                 },
                 "direction": {
@@ -112,7 +114,7 @@ It includes a list of stoplosses and the risk on them and finally the level or m
                     "type": "integer",
                     "min": 1,
                     "max": 120,
-                    "description": '''If user chooses the swing as method, they can specify the neighborhood.'''
+                    "description": '''If the user chooses the swing as method, they can specify the neighborhood.'''
                 },
                 "atr_coef": {
                     "type": "number",
@@ -127,7 +129,8 @@ It includes a list of stoplosses and the risk on them and finally the level or m
     ######### Take-Profit Calculation #########
     {
         "name": "calculate_tp",
-        "description": '''Take profit (TP) is  opposite of the stop-loss (SL) and is based on maximum reward that we intend to achieve from a trade. It represents the price level at which a trader aims to close a position to secure profits before the market reverses. \
+        "description": '''Take profit (TP) is opposite of the stop-loss (SL) and is based on maximum reward that we intend to achieve from a trade. \
+It represents the price level at which a trader aims to close a position to secure profits before the market reverses. \
 Returns list of price for take-profit and information for each price For exampe: \
 {'tp': [5139.25, 5140.25, 5144.0], 'info': ['calculated based on the level VWAP_Top_Band_2', 'calculated based on the level Overnight_high', 'calculated based on the level VWAP_Top_Band_3']} ''',
         "parameters": {
