@@ -9,7 +9,7 @@ messages = []
 def date_validation(date_text):
     valid = True
     try:
-        datetime.date.fromisoformat(date_text)
+        datetime.strptime(date_text, "%d/%m/%Y %H:%M:%S")
         valid = True
     except ValueError:
         valid = False

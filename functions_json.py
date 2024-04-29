@@ -5,6 +5,7 @@ functions = [
         "name": "detect_trend",
         "description": "Analyzes the trend of a specified financial instrument over a given time range. \
 It is designed primarily for financial data analysis, enabling users to gauge the general direction of a security or market index. \
+Whether start_datetime with end_datetime, end_datetime with lookback or lookback parameters could be valued for determining the period over which's trend wants to be detected. \
 The function returns a numerical value that indicates the trend intensity and direction within the specified parameters. \
 Returns a number between -3 and 3 that represents the trend’s intensity and direction. The value is interpreted as follows: \
 \n -3: strong bearish (downward) trend \
@@ -114,7 +115,7 @@ It includes a list of stoplosses and the risk on them and finally the level or m
                     "type": "integer",
                     "min": 1,
                     "max": 120,
-                    "description": '''If the user chooses the swing as method, they can specify the neighborhood.'''
+                    "description": '''A parameter that is used in the swing method to define the range or window within which swings are detected. example: If the "neighborhood" parameter is set to 3, it means that the swing detection is based on considering 3 candles to the left and 3 candles to the right of the swing point.'''
                 },
                 "atr_coef": {
                     "type": "number",
