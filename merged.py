@@ -29,32 +29,31 @@ from io import BufferedReader, StringIO
 
 
 class FileProcessor:
-    def __init__(self):
-        pass
+    def __init__(self, api_name='azureopenai'):
+        if api_name == 'openai':
+            self.api_key = "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"
+            self.client = OpenAI(api_key=self.api_key)
+            self.GPT_MODEL = "gpt-3.5-turbo-1106"
+            self.whisper_model = "whisper-1"
+        else:  # Default to 'azureopenai'
+            self.api_endpoint = 'https://tensurfbrain1.openai.azure.com/'
+            self.api_version = '2023-10-01-preview'
+            self.api_key = '80ddd1ad72504f2fa226755d49491a61'
+            self.client = AzureOpenAI(
+                api_key=self.api_key,
+                api_version=self.api_version,
+                azure_endpoint=self.api_endpoint
+            )
+            self.GPT_MODEL = "gpt_35_16k"
+            self.whisper_model = "whisper_001"
 
-    def chat_with_ai(self, messages: list, content: str, api_name: str):
+    def chat_with_ai(self, messages: list, content: str):
         # try:
             if not content:
                 return ""
             
-            if api_name == 'openai':
-              api_key = "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"
-              client = OpenAI(api_key=api_key)
-              GPT_MODEL_3 = "gpt-3.5-turbo-1106"
-            elif (not api_name) or (api_name == 'azureopenai'):
-              api_type = "azure"
-              api_endpoint = 'https://tensurf.openai.azure.com/'
-              api_version = '2023-10-01-preview'
-              api_key = '74b3de375b964f73a6b7668fe459e26f'
-              client = AzureOpenAI(
-                api_key= api_key,
-                api_version= api_version,
-                azure_endpoint= api_endpoint
-                )
-              GPT_MODEL_3 = "gpt_35"
-            
             def get_response(messages, functions, model, function_call):
-                response = client.chat.completions.create(
+                response = self.client.chat.completions.create(
                     model=model, messages=messages, functions=functions, function_call=function_call)
                 return response
             
@@ -112,7 +111,7 @@ class FileProcessor:
                         trend = FC.detect_trend(parameters=function_arguments)
                         messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
                         chat_response = get_response(
-                            messages, functions, GPT_MODEL_3, "auto"
+                            messages, functions, self.GPT_MODEL, "auto"
                         )
                         assistant_message = chat_response.choices[0].message
                         messages.append(assistant_message)
@@ -130,7 +129,7 @@ class FileProcessor:
                         sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
                         messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Now generate a proper response"})
                         chat_response = get_response(
-                            messages, functions, GPT_MODEL_3, "auto"
+                            messages, functions, self.GPT_MODEL, "auto"
                         )
                         results = chat_response.choices[0].message.content
                     
@@ -142,7 +141,7 @@ class FileProcessor:
             
             messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
             messages.append({"role": "user", "content": content})
-            response = get_response(messages, functions, GPT_MODEL_3, "auto")
+            response = get_response(messages, functions, self.GPT_MODEL, "auto")
             res = get_result(messages, response)
             return res
         
@@ -264,9 +263,8 @@ class FileProcessor:
     def speech_process(self, speech) -> str:
         try:
             print("Speech file detected. Processing speech...")
-            client = OpenAI()
-            transcription = client.audio.transcriptions.create(
-                model="whisper-1",
+            transcription = self.client.audio.transcriptions.create(
+                model=self.whisper_model,
                 file= BufferedReader(speech))
             speech_contents = transcription.text
             print("Speech processing complete.")
@@ -341,7 +339,7 @@ class FileProcessor:
             print(f"An error occurred while getting content: {e}")
         return content.strip()
 
-    def get_user_input(self, file, prompt: Optional[str], messages: Optional[list], api_name: str = None) -> str:
+    def get_user_input(self, file, prompt: Optional[str], messages: Optional[list]) -> str:
         content = ""
         if file:
             file_content = self.get_content(file)
@@ -349,4 +347,4 @@ class FileProcessor:
                 content += file_content + "\n"
         if prompt:
             content += prompt + "\n"
-        return self.chat_with_ai(messages=messages,content=content.strip(), api_name=api_name)
+        return self.chat_with_ai(messages=messages,content=content.strip())
