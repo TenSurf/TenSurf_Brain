@@ -26,8 +26,8 @@ from openai import AzureOpenAI
 from functions_json import functions
 from importnb import imports
 with imports("ipynb"):
-    import function_call
-from utils import date_validation, monthdelta
+    import functions_python
+from utils import date_validation, monthdelta, messages
 import config
 from datetime import timezone
 
@@ -66,9 +66,9 @@ class FileProcessor:
                     function_arguments = json.loads(chat_response.choices[0].message.function_call.arguments)
                     function_arguments["timezone"] = "30"
                     k = int(function_arguments["timezone"])
-                    FC = FunctionCalls()
+                    FC = functions_python.FunctionCalls()
                     print(f"\n{chat_response.choices[0].message}\n")
-                    now = datetime.now() - timedelta(minutes=k)
+                    now = functions_python.datetime.now() - functions_python.timedelta(minutes=k)
 
                     if function_name == "detect_trend":
                         # correcting function_arguments
@@ -370,29 +370,29 @@ class FileProcessor:
         return self.chat_with_ai(messages=messages,content=content.strip())
 
 
-# # For Debugging
-# prompts = [
-#     # detect_trend
-#     "What is the trend of NQ stock from 4/20/2024 15:45:30 until 4/27/2024 15:45:30?",
-#     # calculate_sr
-#     "Calculate Support and Resistance Levels based on ES by looking back up to past 10 days and timeframe of 1 hour.",
-#     # calculate_sl
-#     "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
-#     # calculate_tp
-#     "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
-# ]
+# For Debugging
+prompts = [
+    # detect_trend
+    "What is the trend of NQ stock from 4/20/2024 15:45:30 until 4/27/2024 15:45:30?",
+    # calculate_sr
+    "Calculate Support and Resistance Levels based on ES by looking back up to past 10 days and timeframe of 1 hour.",
+    # calculate_sl
+    "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
+    # calculate_tp
+    "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
+]
 
 # saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt
-# results = {}
+results = {}
 # from utils import messages
 
 # getting the answer of the prompts
 # try:
-    # llm = FileProcessor()
-    # for prompt in prompts:
-    #     result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
-    #     print(f"{prompt}    =>    {result}")
-    #     results[prompt]=result
+llm = FileProcessor()
+for prompt in prompts:
+    result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
+    print(f"{prompt}    =>    {result}")
+    results[prompt]=result
 
 # except Exception as e:
 #     print(f"The following exception occured:\n{e}")

@@ -5,6 +5,5 @@ gradio
 influxdb_client 
 scikit-learn
 openai
-zigzag
 PyPDF2
 importnb
