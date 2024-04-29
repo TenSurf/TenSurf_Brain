@@ -27,9 +27,9 @@ from functions_json import functions
 from importnb import imports
 with imports("ipynb"):
     import functions_python
-from utils import date_validation, monthdelta, messages
 import config
 from datetime import timezone
+from utils import *
 
 
 class FileProcessor:
@@ -72,7 +72,11 @@ class FileProcessor:
 
                     if function_name == "detect_trend":
                         # correcting function_arguments
-                        if "lookback" not in function_arguments:
+                        if "lookback" in function_arguments and "end_datetime" in function_arguments:
+                            # function_arguments["start_datetime"] = 
+                            pass
+                        
+                        elif "lookback" not in function_arguments:
                             if "symbol" not in function_arguments:
                                 function_arguments["symbol"] = "NQ"
                             if "start_datetime" not in function_arguments:
@@ -373,13 +377,13 @@ class FileProcessor:
 # For Debugging
 prompts = [
     # detect_trend
-    "What is the trend of NQ stock from 4/20/2024 15:45:30 until 4/27/2024 15:45:30?",
-    # calculate_sr
-    "Calculate Support and Resistance Levels based on ES by looking back up to past 10 days and timeframe of 1 hour.",
-    # calculate_sl
-    "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
-    # calculate_tp
-    "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
+    "What is the trend of NQ stock from 20/4/2024 15:45:30 until 24/4/2024 15:45:30?",
+    # # calculate_sr
+    # "Calculate Support and Resistance Levels based on ES by looking back up to past 10 days and timeframe of 1 hour.",
+    # # calculate_sl
+    # "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
+    # # calculate_tp
+    # "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
 ]
 
 # saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt

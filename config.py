@@ -8,7 +8,7 @@ azure_api_version = '2023-10-01-preview'
 # azure_api_key = '74b3de375b964f73a6b7668fe459e26f'
 azure_api_key = "80ddd1ad72504f2fa226755d49491a61"
 GPT_MODEL_3 = "gpt-3.5-turbo-1106"
-azure_GPT_MODEL_3 = "gpt_35"
+azure_GPT_MODEL_3 = "gpt_35_16k"
 
 
 logging.basicConfig(filename="logs/NOTSET.log",
