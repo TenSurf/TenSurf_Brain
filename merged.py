@@ -46,11 +46,25 @@ class FileProcessor:
             )
             self.GPT_MODEL = "gpt_35_16k"
             self.whisper_model = "whisper_001"
+            
+    def is_TunSurf_related (self, prompt):
+        messages = [
+        {"role": "system", "content": "Classify if the following prompt is irrelevant to trading or financial markets. note: just say irrelevant or relevant"},
+        {"role": "user", "content": prompt},
+        {"role": "system", "content": "Guidelines for you as a Trading Assistant:Relevance: Focus exclusively on queries related to trading and financial markets. If a question falls outside this scope, politely inform the user that the question is beyond the service's focus.Accuracy: Ensure that the information provided is accurate and up-to-date. Use reliable financial data and current market analysis to inform your responses.Clarity: Deliver answers in a clear, concise, and understandable manner. Avoid jargon unless the user demonstrates familiarity with financial terms.Promptness: Aim to provide responses quickly to facilitate timely decision-making for users.Confidentiality: Do not ask for or handle personal investment details or sensitive financial information.Compliance: Adhere to legal and ethical standards applicable to financial advice and information dissemination.Again, focus solely on topics related to trading and financial markets. Politely notify the user if a question is outside this specific area of expertise."}
+        ]
+        response = self.client.chat.completions.create(model= self.GPT_MODEL ,messages=messages)
+        #print(response)
+        return response.choices[0].message.content
 
     def chat_with_ai(self, messages: list, content: str):
         # try:
             if not content:
                 return ""
+            
+            relevance_check = self.is_TunSurf_related(content)
+            if "irrelevant" in relevance_check.lower():
+                return "Your ask is irrelevant, please write a new one."
             
             def get_response(messages, functions, model, function_call):
                 response = self.client.chat.completions.create(
