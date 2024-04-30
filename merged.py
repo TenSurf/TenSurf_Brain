@@ -42,145 +42,141 @@ class FileProcessor:
             )
 
     def chat_with_ai(self, messages: list, content: str):
-        # try:
-            if not content:
-                return ""
-            
-            def get_response(messages, functions, model, function_call, temperature=0.2):
-                response = self.client.chat.completions.create(
-                    model=model, messages=messages, functions=functions, function_call=function_call, temperature=temperature)
-                return response
-            
-            def get_result(messages, chat_response):
-                assistant_message = chat_response.choices[0].message
-                messages.append(assistant_message)
-                
-                if chat_response.choices[0].message.function_call == None:
-                    results = f"{chat_response.choices[0].message.content}"
-                
-                else:
-                    results = ""
-                    if assistant_message.content != None:
-                        results += assistant_message.content + "\n"
-                    function_name = chat_response.choices[0].message.function_call.name
-                    function_arguments = json.loads(chat_response.choices[0].message.function_call.arguments)
-                    FC = functions_python.FunctionCalls()
-                    print(f"\n{chat_response.choices[0].message}\n")
-                    now = functions_python.datetime.now()
-
-                    if function_name == "detect_trend":
-                        correct_dates = True
-                        # validating dates
-                        if "start_datetime" in function_arguments or "end_datetime" in function_arguments:
-                            correct_dates = False
-                            # checking the format
-                            if not (date_validation(function_arguments["start_datetime"]) or date_validation(function_arguments["end_datetime"])):
-                                results += "Please enter dates in the following foramat: %d/%m/%Y %H:%M:%S or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
-                            # if start_datetime or end_datetime were in the future
-                            elif (now < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S')) or (now < datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')):
-                                results += "Dates should not be in the future!"
-                            # if end is before start
-                            elif datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S') < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S'):
-                                results += "End date time should be after start date time!"
-                            # formates are correct
-                            elif "lookback" in function_arguments and "start_datetime" in function_arguments:
-                                results += "Both lookback and datetimes could not be valued"
-                            # dates are valid
-                            else:
-                                correct_dates = True
-                        
-                        # if loookback and end_datetime were specified
-                        if ("lookback" in function_arguments and "end_datetime" in function_arguments) and correct_dates:
-                            end_datetime = datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')
-                            k = int(function_arguments["lookback"].split(" ")[0])
-                            function_arguments["start_datetime"] = f"{end_datetime - timedelta(days=k)}"
-                        
-                        # handling the default values when none of the parameters were specified
-                        elif ("lookback" not in function_arguments) and correct_dates:
-                            if "symbol" not in function_arguments:
-                                function_arguments["symbol"] = "NQ"
-                            if "start_datetime" not in function_arguments:
-                                function_arguments["start_datetime"] = f"{now - timedelta(days=10)}"
-                            if "end_datetime" not in function_arguments:
-                                function_arguments["end_datetime"] = f"{now}"
-                        
-                        # if just lookback was specified
-                        elif correct_dates:
-                            function_arguments["end_datetime"] = f"{now}"
-                            k = int(function_arguments["lookback"].split(" ")[0])
-                            if function_arguments["lookback"].split(" ")[-1] == "seconds" or function_arguments["lookback"].split(" ")[-1] == "second":
-                                function_arguments["start_datetime"] = f"{now - timedelta(seconds=k)}"
-                            elif function_arguments["lookback"].split(" ")[-1] == "minutes" or function_arguments["lookback"].split(" ")[-1] == "minute":
-                                function_arguments["start_datetime"] = f"{now - timedelta(minutes=k)}"
-                            elif function_arguments["lookback"].split(" ")[-1] == "hours" or function_arguments["lookback"].split(" ")[-1] == "hour":
-                                function_arguments["start_datetime"] = f"{now - timedelta(hours=k)}"
-                            elif function_arguments["lookback"].split(" ")[-1] == "days" or function_arguments["lookback"].split(" ")[-1] == "day":
-                                function_arguments["start_datetime"] = f"{now - timedelta(days=k)}"
-                            elif function_arguments["lookback"].split(" ")[-1] == "weeks" or function_arguments["lookback"].split(" ")[-1] == "week":
-                                function_arguments["start_datetime"] = f"{now - timedelta(weeks=k)}"
-                            elif function_arguments["lookback"].split(" ")[-1] == "months" or function_arguments["lookback"].split(" ")[-1] == "month":
-                                function_arguments["start_datetime"] = f"{monthdelta(now, -k)}"
-                            elif function_arguments["lookback"].split(" ")[-1] == "years" or function_arguments["lookback"].split(" ")[-1] == "year":
-                                function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
-                            else:
-                                raise ValueError("wrong value of time")
-
-                        # results will be generated only when dates are in the correct format
-                        if correct_dates:
-                            trend = FC.detect_trend(parameters=function_arguments)
-                            messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should and introduce these parameters to them so that they can use them. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
-                            chat_response = get_response(
-                                messages, functions, config.azure_GPT_MODEL_3, "auto"
-                            )
-                            assistant_message = chat_response.choices[0].message
-                            messages.append(assistant_message)
-                            results += chat_response.choices[0].message.content
-
-                    elif function_name == "calculate_sr":
-                        # correcting function_arguments
-                        if "symbol" not in function_arguments:
-                            function_arguments["symbol"] = "ES"
-                        if "timeframe" not in function_arguments:
-                            function_arguments["timeframe"] = "1h"
-                        if "lookback_days" not in function_arguments:
-                            function_arguments["lookback_days"] = "10 days"
-
-                        sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. If the user didn't specified lookback_days or timeframe parameters, introduce these parameters to them so that they can use these parameters. Now generate a proper response"})
-                        chat_response = get_response(
-                            messages, functions, config.azure_GPT_MODEL_3, "auto"
-                        )
-                        results += chat_response.choices[0].message.content
-
-                    elif function_name == "calculate_sl":
-                        stoploss = FC.calculate_sl(function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {stoploss}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. The unit of every number in the answer should be mentioned. Now generate a proper response"})
-                        chat_response = get_response(
-                            messages, functions, config.azure_GPT_MODEL_3, "auto"
-                        )
-                        results += chat_response.choices[0].message.content
-
-                    elif function_name == "calculate_tp":
-                        takeprofit = FC.calculate_tp(function_arguments)
-                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {takeprofit}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
-                        chat_response = get_response(
-                            messages, functions, config.azure_GPT_MODEL_3, "auto"
-                        )
-                        results += chat_response.choices[0].message.content
-
-                    else:
-                        raise ValueError(f"{chat_response.choices[0].message}")
-                 
-                return results
-            
-            messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
-            messages.append({"role": "user", "content": content})
-            response = get_response(messages, functions, config.azure_GPT_MODEL_3, "auto")
-            res = get_result(messages, response)
-            return res
+        if not content:
+            return ""
         
-        # except Exception as e:
-        #     print(f"An error occurred while chatting with AI, please try again with: {e}")
+        def get_response(messages, functions, model, function_call, temperature=0.2):
+            response = self.client.chat.completions.create(
+                model=model, messages=messages, functions=functions, function_call=function_call, temperature=temperature)
+            return response
+        
+        def get_result(messages, chat_response):
+            assistant_message = chat_response.choices[0].message
+            messages.append(assistant_message)
+            
+            if chat_response.choices[0].message.function_call == None:
+                results = f"{chat_response.choices[0].message.content}"
+            
+            else:
+                results = ""
+                if assistant_message.content != None:
+                    results += assistant_message.content + "\n"
+                function_name = chat_response.choices[0].message.function_call.name
+                function_arguments = json.loads(chat_response.choices[0].message.function_call.arguments)
+                FC = functions_python.FunctionCalls()
+                print(f"\n{chat_response.choices[0].message}\n")
+                now = functions_python.datetime.now()
+
+                if function_name == "detect_trend":
+                    correct_dates = True
+                    # validating dates
+                    if "start_datetime" in function_arguments or "end_datetime" in function_arguments:
+                        correct_dates = False
+                        # checking the format
+                        if not (date_validation(function_arguments["start_datetime"]) or date_validation(function_arguments["end_datetime"])):
+                            results += "Please enter dates in the following foramat: %d/%m/%Y %H:%M:%S or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
+                        # if start_datetime or end_datetime were in the future
+                        elif (now < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S')) or (now < datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')):
+                            results += "Dates should not be in the future!"
+                        # if end is before start
+                        elif datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S') < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S'):
+                            results += "End date time should be after start date time!"
+                        # formates are correct
+                        elif "lookback" in function_arguments and "start_datetime" in function_arguments:
+                            results += "Both lookback and datetimes could not be valued"
+                        # dates are valid
+                        else:
+                            correct_dates = True
+                    
+                    # if loookback and end_datetime were specified
+                    if ("lookback" in function_arguments and "end_datetime" in function_arguments) and correct_dates:
+                        end_datetime = datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')
+                        k = int(function_arguments["lookback"].split(" ")[0])
+                        function_arguments["start_datetime"] = f"{end_datetime - timedelta(days=k)}"
+                    
+                    # handling the default values when none of the parameters were specified
+                    elif ("lookback" not in function_arguments) and correct_dates:
+                        if "symbol" not in function_arguments:
+                            function_arguments["symbol"] = "NQ"
+                        if "start_datetime" not in function_arguments:
+                            function_arguments["start_datetime"] = f"{now - timedelta(days=10)}"
+                        if "end_datetime" not in function_arguments:
+                            function_arguments["end_datetime"] = f"{now}"
+                    
+                    # if just lookback was specified
+                    elif correct_dates:
+                        function_arguments["end_datetime"] = f"{now}"
+                        k = int(function_arguments["lookback"].split(" ")[0])
+                        if function_arguments["lookback"].split(" ")[-1] == "seconds" or function_arguments["lookback"].split(" ")[-1] == "second":
+                            function_arguments["start_datetime"] = f"{now - timedelta(seconds=k)}"
+                        elif function_arguments["lookback"].split(" ")[-1] == "minutes" or function_arguments["lookback"].split(" ")[-1] == "minute":
+                            function_arguments["start_datetime"] = f"{now - timedelta(minutes=k)}"
+                        elif function_arguments["lookback"].split(" ")[-1] == "hours" or function_arguments["lookback"].split(" ")[-1] == "hour":
+                            function_arguments["start_datetime"] = f"{now - timedelta(hours=k)}"
+                        elif function_arguments["lookback"].split(" ")[-1] == "days" or function_arguments["lookback"].split(" ")[-1] == "day":
+                            function_arguments["start_datetime"] = f"{now - timedelta(days=k)}"
+                        elif function_arguments["lookback"].split(" ")[-1] == "weeks" or function_arguments["lookback"].split(" ")[-1] == "week":
+                            function_arguments["start_datetime"] = f"{now - timedelta(weeks=k)}"
+                        elif function_arguments["lookback"].split(" ")[-1] == "months" or function_arguments["lookback"].split(" ")[-1] == "month":
+                            function_arguments["start_datetime"] = f"{monthdelta(now, -k)}"
+                        elif function_arguments["lookback"].split(" ")[-1] == "years" or function_arguments["lookback"].split(" ")[-1] == "year":
+                            function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
+                        else:
+                            raise ValueError("wrong value of time")
+
+                    # results will be generated only when dates are in the correct format
+                    if correct_dates:
+                        trend = FC.detect_trend(parameters=function_arguments)
+                        messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {trend}. At any situations, never return the number which is the output of the detect_trend function. Instead, use its correcsponding explanation which is in the detect_trend function's description. Make sure to mention the start_datetime and end_datetime. If the user provide neither specified both start_datetime and end_datetime nor lookback parameters, politely tell them that they should and introduce these parameters to them so that they can use them. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response."})
+                        chat_response = get_response(
+                            messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        )
+                        assistant_message = chat_response.choices[0].message
+                        messages.append(assistant_message)
+                        results += chat_response.choices[0].message.content
+
+                elif function_name == "calculate_sr":
+                    # correcting function_arguments
+                    if "symbol" not in function_arguments:
+                        function_arguments["symbol"] = "ES"
+                    if "timeframe" not in function_arguments:
+                        function_arguments["timeframe"] = "1h"
+                    if "lookback_days" not in function_arguments:
+                        function_arguments["lookback_days"] = "10 days"
+
+                    sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
+                    messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. If the user didn't specified lookback_days or timeframe parameters, introduce these parameters to them so that they can use these parameters. Now generate a proper response"})
+                    chat_response = get_response(
+                        messages, functions, config.azure_GPT_MODEL_3, "auto"
+                    )
+                    results += chat_response.choices[0].message.content
+
+                elif function_name == "calculate_sl":
+                    stoploss = FC.calculate_sl(function_arguments)
+                    messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {stoploss}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. The unit of every number in the answer should be mentioned. Now generate a proper response"})
+                    chat_response = get_response(
+                        messages, functions, config.azure_GPT_MODEL_3, "auto"
+                    )
+                    results += chat_response.choices[0].message.content
+
+                elif function_name == "calculate_tp":
+                    takeprofit = FC.calculate_tp(function_arguments)
+                    messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {takeprofit}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response"})
+                    chat_response = get_response(
+                        messages, functions, config.azure_GPT_MODEL_3, "auto"
+                    )
+                    results += chat_response.choices[0].message.content
+
+                else:
+                    raise ValueError(f"{chat_response.choices[0].message}")
+                
+            return results
+        
+        messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
+        messages.append({"role": "user", "content": content})
+        response = get_response(messages, functions, config.azure_GPT_MODEL_3, "auto")
+        res = get_result(messages, response)
+        return res
 
     def image_process(self, file_path: str) -> str:
         try:
@@ -390,31 +386,31 @@ class FileProcessor:
         return self.chat_with_ai(messages=messages,content=content.strip())
 
 
-# For Debugging
-prompts = [
+# # For Debugging
+# prompts = [
     # detect_trend
-    "What is the trend of NQ stock from 20/4/2024 15:45:30 until 24/4/2024 15:45:30?",
-    # calculate_sr
-    "Calculate Support and Resistance Levels based on ES by looking back up to past 10 days and timeframe of 1 hour.",
-    # calculate_sl
-    "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
-    # calculate_tp
-    "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
-    # # parallel function calling
-    # "What is the trend of "
-]
+    # "What is the trend of NQ stock from 20/4/2024 15:45:30 until 24/4/2024 15:45:30?",
+    # # calculate_sr
+    # "Calculate Support and Resistance Levels based on ES by looking back up to past 10 days and timeframe of 1 hour.",
+    # # calculate_sl
+    # "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
+    # # calculate_tp
+    # "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
+#     # parallel function calling
+#     "detect the trend of NQ and calculate sr of it"
+# ]
 
 # saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt
-results = {}
-from utils import messages
+# results = {}
+# from utils import messages
 
 # getting the answer of the prompts
 # try:
-llm = FileProcessor()
-for prompt in prompts:
-    result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
-    print(f"{prompt}    =>    {result}")
-    results[prompt]=result
+# llm = FileProcessor()
+# for prompt in prompts:
+#     result = llm.get_user_input(file_path=None, prompt=prompt, messages=messages)
+#     print(f"{prompt}    =>    {result}")
+#     results[prompt]=result
 
 # except Exception as e:
 #     print(f"The following exception occured:\n{e}")
