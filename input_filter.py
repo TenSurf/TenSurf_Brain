@@ -1,14 +1,12 @@
 from utils import monthdelta, datetime, timedelta, date_validation, relativedelta
 
+date_format = "%m/%d/%y %H:%M:%S"
 
 # setting the given time with the clock of the server
-def change_time_zone(front_end_json):
-    if "timezone" in front_end_json:
-        k = int(front_end_json["timezone"])
-        s = datetime(front_end_json["start_datetime"]) - timedelta(minutes=k)
-        front_end_json["start_datetime"] = f"{s}"
-        e = datetime(front_end_json["end_datetime"]) - timedelta(minutes=k)
-        front_end_json["end_datetime"] = f"{e}"
+def change_time_zone(str_date: str, timezone: int) -> str:
+    date = datetime.strptime(str_date, date_format)
+    date += timedelta(minutes=timezone)
+    return f"{date}"
 
 
 front_end_json_sample = {
@@ -23,35 +21,26 @@ front_end_json_sample = {
 'file_path': ''
 }
 
-front_end_json_sample.keys()
+# ["symbol", "start_datetime", "end_datetime", "end_datetime", "timeframe", "lookback_days", "direction", "method", "neighborhood", "atr_coef", "min_sl_ticks", "stoploss"]
 
-def filter_input(front_json, function_name, function_arguments):
-    for front_key in front_json.keys():
-        if f"{front_key}" not in function_arguments and f"{front_key}" in front_json:
-            function_arguments[f"{front_key}"] = front_json[f"{front_key}"]
-    function_arguments = llm_filter_input(function_name, function_arguments)
-    # timezone
-    
-    return function_arguments
-
-
-def llm_filter_input(function_name, function_arguments):
+def input_filter(function_name: str, function_arguments: dict, front_json: dict):
     
     now = datetime.now()
 
     if function_name == "detect_trend":
+        timezone = int(front_json["timezone"])
         correct_dates = True
         # validating dates
         if "start_datetime" in function_arguments or "end_datetime" in function_arguments:
             correct_dates = False
             # checking the format
             if not (date_validation(function_arguments["start_datetime"]) or date_validation(function_arguments["end_datetime"])):
-                results = "Please enter dates in the following foramat: %d/%m/%Y %H:%M:%S or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
+                results = f"Please enter dates in the following foramat: {date_format} or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
             # if start_datetime or end_datetime were in the future
-            elif (now < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S')) or (now < datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')):
+            elif (now < datetime.strptime(function_arguments["start_datetime"], date_format)) or (now < datetime.strptime(function_arguments["end_datetime"], date_format)):
                 results = "Dates should not be in the future!"
             # if end is before start
-            elif datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S') < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S'):
+            elif datetime.strptime(function_arguments["end_datetime"], date_format) < datetime.strptime(function_arguments["start_datetime"], date_format):
                 results = "End date time should be after start date time!"
             # formates are correct
             elif "lookback" in function_arguments and "start_datetime" in function_arguments:
@@ -69,11 +58,26 @@ def llm_filter_input(function_name, function_arguments):
         # handling the default values when none of the parameters were specified
         elif ("lookback" not in function_arguments) and correct_dates:
             if "symbol" not in function_arguments:
-                function_arguments["symbol"] = "NQ"
+                if "symbol" not in front_json:
+                    function_arguments["symbol"] = "NQ"
+                else:
+                    function_arguments["symbol"] = front_json["symbol"]
             if "start_datetime" not in function_arguments:
-                function_arguments["start_datetime"] = f"{now - timedelta(days=10)}"
+                if "start_datetime" not in front_json:
+                    function_arguments["start_datetime"] = f"{now - timedelta(days=10)}"
+                else:
+                    function_arguments["start_datetime"] = front_json["start_datetime"]
+                    function_arguments["start_datetime"] = change_time_zone(function_arguments["start_datetime"], timezone)
+            else:
+                function_arguments["start_datetime"] = change_time_zone(function_arguments["start_datetime"], timezone)
             if "end_datetime" not in function_arguments:
-                function_arguments["end_datetime"] = f"{now}"
+                if "end_datetime" not in front_json:
+                    function_arguments["end_datetime"] = f"{now}"
+                else:
+                    function_arguments["end_datetime"] = front_json["end_datetime"]
+                    function_arguments["end_datetime"] = change_time_zone(function_arguments["end_datetime"], timezone)
+            else:
+                function_arguments["end_datetime"] = change_time_zone(function_arguments["end_datetime"], timezone)
         
         # if just lookback was specified
         elif correct_dates:
@@ -95,37 +99,99 @@ def llm_filter_input(function_name, function_arguments):
                 function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
             else:
                 raise ValueError("wrong value of time")
-        
+
         return [function_arguments, results, correct_dates]
 
     elif function_name == "calculate_sr":
         # Handling the default values
         if "symbol" not in function_arguments:
-            function_arguments["symbol"] = "ES"
+            if "symbol" not in front_json:
+                function_arguments["symbol"] = "ES"
+            else:
+                function_arguments["symbol"] = front_json["symbol"]
         if "timeframe" not in function_arguments:
-            function_arguments["timeframe"] = "1h"
+            if "timeframe" not in front_json:
+                function_arguments["timeframe"] = "1h"
+            else:
+                function_arguments["timeframe"] = front_json["timeframe"]
         if "lookback_days" not in function_arguments:
-            function_arguments["lookback_days"] = "10 days"
+            if "lookback_days" not in front_json:
+                function_arguments["lookback_days"] = "10 days"
+            else:
+                function_arguments["lookback_days"] = front_json["lookback_days"]
 
     elif function_name == "calculate_sl":
         # Handling the default values
-        function_arguments["symbol"] = function_arguments["symbol"] if "symbol" in function_arguments else "NQ"
-        function_arguments["direction"] = function_arguments["direction"] if "direction" in function_arguments else 1
-        function_arguments["method"] = function_arguments["method"] if 'method' in function_arguments else 'nothing'
-        if function_arguments["method"] is None or function_arguments["method"] == '' or function_arguments["method"] == 'all':
-            function_arguments["method"] = 'nothing'
-        function_arguments["neighborhood"] = function_arguments["neighborhood"] if 'neighborhood' in function_arguments else 20
-        function_arguments["atr_coef"] = function_arguments["atr_coef"] if 'atr_coef' in function_arguments else 1.5
-        function_arguments["lookback"] = function_arguments["lookback"] if 'lookback' in function_arguments else 100
-        function_arguments["min_sl_ticks"] = function_arguments["min_sl_ticks"] if 'min_sl_ticks' in function_arguments else 4
+        if "symbol" not in function_arguments:
+            if "symbol" not in front_json:
+                function_arguments["symbol"] = "NQ"
+            else:
+                function_arguments["symbol"] = front_json["symbol"]
+        if "direction" not in function_arguments:
+            if "direction" not in front_json:
+                function_arguments["direction"] = 1
+            else:
+                function_arguments["direction"] = int(front_json["direction"])
+        else:
+            function_arguments["direction"] = int(function_arguments["direction"])
+        if "method" not in function_arguments or function_arguments["method"] is None or function_arguments["method"] == '' or function_arguments["method"] == 'all':
+            if "method" not in front_json:
+                function_arguments["method"] = "nothing"
+            else:
+                function_arguments["method"] = front_json["method"]
+        if "neighborhood" not in function_arguments:
+            if "neighborhood" not in front_json:
+                function_arguments["neighborhood"] = 20
+            else:
+                function_arguments["neighborhood"] = int(front_json["neighborhood"])
+        else:
+            function_arguments["neighborhood"] = int(function_arguments["neighborhood"])
+        if "atr_coef" not in function_arguments:
+            if "atr_coef" not in front_json:
+                function_arguments["atr_coef"] = 1.5
+            else:
+                function_arguments["atr_coef"] = float(front_json["atr_coef"])
+        else:
+            function_arguments["atr_coef"] = float(function_arguments["atr_coef"])
+        if "lookback" not in function_arguments:
+            if "lookback" not in front_json:
+                function_arguments["lookback"] = 100
+            else:
+                function_arguments["lookback"] = int(front_json["lookback"])
+        else:
+            function_arguments["lookback"] = int(function_arguments["lookback"])
+        if "min_sl_ticks" not in function_arguments:
+            if "min_sl_ticks" not in front_json:
+                function_arguments["min_sl_ticks"] = 4
+            else:
+                function_arguments["min_sl_ticks"] = int(front_json["min_sl_ticks"])
+        else:
+            function_arguments["min_sl_ticks"] = int(function_arguments["min_sl_ticks"])
 
     elif function_name == "calculate_tp":
         # Handling the default values
-        function_arguments["symbol"] = function_arguments["symbol"] if "symbol" in function_arguments else "NQ"
-        function_arguments["direction"] = function_arguments["direction"] if "direction" in function_arguments else 1
-        function_arguments["stoploss"] = function_arguments["stoploss"] if "stoploss" in function_arguments else 0
+        if "symbol" not in function_arguments:
+            if "symbol" not in front_json:
+                function_arguments["symbol"] = "NQ"
+            else:
+                function_arguments["symbol"] = front_json["symbol"]
+        if "direction" not in function_arguments:
+            if "direction" not in front_json:
+                function_arguments["direction"] = 1
+            else:
+                function_arguments["direction"] = int(front_json["direction"])
+        else:
+            function_arguments["direction"] = int(function_arguments["direction"])
+        if "stoploss" not in function_arguments:
+            if "stoploss" not in front_json:
+                function_arguments["stoploss"] = 0
+            else:
+                function_arguments["stoploss"] = float(front_json["stoploss"])
+        else:
+            function_arguments["stoploss"] = float(function_arguments["stoploss"])
 
     else:
         raise ValueError(f"Incorrect function name: {function_name}")
     
     return function_arguments
+ 
