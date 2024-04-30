@@ -131,7 +131,10 @@ class FileProcessor:
                         chat_response = get_response(
                             messages, functions, self.GPT_MODEL, "auto"
                         )
-                        results = chat_response.choices[0].message.content
+                        results = {
+                            'content': chat_response.choices[0].message.content,
+                            'levels': { 'value': sr_value, 'start': sr_start_date, 'end': sr_end_date, 'importance': sr_importance }
+                        }
                     
                     else:
                         raise ValueError(f"{chat_response.choices[0].message}")
