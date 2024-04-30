@@ -59,16 +59,14 @@ class FileProcessor:
                     results = f"{chat_response.choices[0].message.content}"
                 
                 else:
-                    # results = ""
-                    # if assistant_message.content != None:
-                    #     results = assistant_message.content + "\n"
+                    results = ""
+                    if assistant_message.content != None:
+                        results += assistant_message.content + "\n"
                     function_name = chat_response.choices[0].message.function_call.name
                     function_arguments = json.loads(chat_response.choices[0].message.function_call.arguments)
-                    function_arguments["timezone"] = "30"
-                    k = int(function_arguments["timezone"])
                     FC = functions_python.FunctionCalls()
                     print(f"\n{chat_response.choices[0].message}\n")
-                    now = functions_python.datetime.now() - functions_python.timedelta(minutes=k)
+                    now = functions_python.datetime.now()
 
                     if function_name == "detect_trend":
                         correct_dates = True
@@ -77,16 +75,16 @@ class FileProcessor:
                             correct_dates = False
                             # checking the format
                             if not (date_validation(function_arguments["start_datetime"]) or date_validation(function_arguments["end_datetime"])):
-                                results = "Please enter dates in the following foramat: %d/%m/%Y %H:%M:%S or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
+                                results += "Please enter dates in the following foramat: %d/%m/%Y %H:%M:%S or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
                             # if start_datetime or end_datetime were in the future
                             elif (now < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S')) or (now < datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')):
-                                results = "Dates should not be in the future!"
+                                results += "Dates should not be in the future!"
                             # if end is before start
                             elif datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S') < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S'):
-                                results = "End date time should be after start date time!"
+                                results += "End date time should be after start date time!"
                             # formates are correct
                             elif "lookback" in function_arguments and "start_datetime" in function_arguments:
-                                results = "Both lookback and datetimes could not be valued"
+                                results += "Both lookback and datetimes could not be valued"
                             # dates are valid
                             else:
                                 correct_dates = True
@@ -136,7 +134,7 @@ class FileProcessor:
                             )
                             assistant_message = chat_response.choices[0].message
                             messages.append(assistant_message)
-                            results = chat_response.choices[0].message.content
+                            results += chat_response.choices[0].message.content
 
                     elif function_name == "calculate_sr":
                         # correcting function_arguments
@@ -152,7 +150,7 @@ class FileProcessor:
                         chat_response = get_response(
                             messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
-                        results = chat_response.choices[0].message.content
+                        results += chat_response.choices[0].message.content
 
                     elif function_name == "calculate_sl":
                         stoploss = FC.calculate_sl(function_arguments)
@@ -160,7 +158,7 @@ class FileProcessor:
                         chat_response = get_response(
                             messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
-                        results = chat_response.choices[0].message.content
+                        results += chat_response.choices[0].message.content
 
                     elif function_name == "calculate_tp":
                         takeprofit = FC.calculate_tp(function_arguments)
@@ -168,7 +166,7 @@ class FileProcessor:
                         chat_response = get_response(
                             messages, functions, config.azure_GPT_MODEL_3, "auto"
                         )
-                        results = chat_response.choices[0].message.content
+                        results += chat_response.choices[0].message.content
 
                     else:
                         raise ValueError(f"{chat_response.choices[0].message}")
@@ -402,6 +400,8 @@ prompts = [
     "How much would be the stop loss for trading based on NQ and short positions with minmax method by looking back up to 30 candles and considering 50 candles neighboring the current time and also attribute coefficient of 1.3?",
     # calculate_tp
     "How much would be the take-profit of the NQ with the stop loss of 10 and direction of 1?"
+    # # parallel function calling
+    # "What is the trend of "
 ]
 
 # saving the answer of the prompt in a dictionary which its key is the prompt and its value is the answer to that prompt

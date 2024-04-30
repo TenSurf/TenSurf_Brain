@@ -21,7 +21,7 @@ front_end_json_sample = {
 'file_path': ''
 }
 
-# ["symbol", "start_datetime", "end_datetime", "end_datetime", "timeframe", "lookback_days", "direction", "method", "neighborhood", "atr_coef", "min_sl_ticks", "stoploss"]
+front_json_keys = ["symbol", "start_datetime", "end_datetime", "end_datetime", "timeframe", "lookback_days", "direction", "method", "neighborhood", "atr_coef", "min_sl_ticks", "stoploss"]
 
 def input_filter(function_name: str, function_arguments: dict, front_json: dict):
     
@@ -67,7 +67,6 @@ def input_filter(function_name: str, function_arguments: dict, front_json: dict)
                     function_arguments["start_datetime"] = f"{now - timedelta(days=10)}"
                 else:
                     function_arguments["start_datetime"] = front_json["start_datetime"]
-                    function_arguments["start_datetime"] = change_time_zone(function_arguments["start_datetime"], timezone)
             else:
                 function_arguments["start_datetime"] = change_time_zone(function_arguments["start_datetime"], timezone)
             if "end_datetime" not in function_arguments:
@@ -75,7 +74,6 @@ def input_filter(function_name: str, function_arguments: dict, front_json: dict)
                     function_arguments["end_datetime"] = f"{now}"
                 else:
                     function_arguments["end_datetime"] = front_json["end_datetime"]
-                    function_arguments["end_datetime"] = change_time_zone(function_arguments["end_datetime"], timezone)
             else:
                 function_arguments["end_datetime"] = change_time_zone(function_arguments["end_datetime"], timezone)
         
