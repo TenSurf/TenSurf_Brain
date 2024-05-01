@@ -624,27 +624,150 @@ def find_trend(data_dict, data_index, start_index, end_index):
         return 0
 
 
+config = {
+	"ES": {
+        "point_value": 50,
+        "tick_size": 0.25
+    },
+    "NQ": {
+        "point_value": 20,
+        "tick_size": 0.25
+    },
+    "RT": {
+        "point_value": 50,
+        "tick_size": 0.1
+    },
+    "YM": {
+        "point_value": 5,
+        "tick_size": 1
+    },
+	"MES": {
+        "point_value": 5,
+        "tick_size": 0.25
+    },
+    "MNQ": {
+        "point_value": 2,
+        "tick_size": 0.25
+    },
+    "CL": {
+        "point_value": 1000,
+        "tick_size": 0.01
+    },
+    "MCL": {
+        "point_value": 100,
+        "tick_size": 0.01
+    },
+    "GC": {
+        "point_value": 1000,
+        "tick_size": 0.01
+    },
+    "MGC": {
+        "point_value": 10,
+        "tick_size": 0.1
+    },
+    "NG": {
+        "point_value": 10000,
+        "tick_size": 0.001
+    },
+    "M2K": {
+        "point_value": 5,
+        "tick_size": 0.1
+    },
+    "ZB": {
+        "point_value": 31.25,
+        "tick_size": 0.01
+    },
+    "ZC": {
+        "point_value": 25,
+        "tick_size": 0.25
+    },
+    "ZM": {
+        "point_value": 100,
+        "tick_size": 0.1
+    },
+    "ZL": {
+        "point_value": 600,
+        "tick_size": 0.01
+    },
+    "ZS": {
+        "point_value": 50,
+        "tick_size": 0.25
+    },
+    "ZW": {
+        "point_value": 50,
+        "tick_size": 0.25
+    },
+    "HG": {
+        "point_value": 25000,
+        "tick_size": 0.005
+    },
+    "MHG": {
+        "point_value": 2500,
+        "tick_size": 0.005
+    },
+    "HE": {
+        "point_value": 400,
+        "tick_size": 0.025
+    },
+    "LE": {
+        "point_value": 400,
+        "tick_size": 0.025
+    },
+    "SI": {
+        "point_value": 5000,
+        "tick_size": 0.005
+    },
+    "SIL": {
+        "point_value": 1000,
+        "tick_size": 0.005
+    },
+    "MYM": {
+        "point_value": 0.5,
+        "tick_size": 1
+    },
+    "6A": {
+        "point_value": 125000,
+        "tick_size": 5e-05
+    },
+    "6B": {
+        "point_value": 62500,
+        "tick_size": 0.0001
+    },
+    "6C": {
+        "point_value": 100000,
+        "tick_size": 5e-05
+    },
+    "6E": {
+        "point_value": 125000,
+        "tick_size": 5e-05
+    },
+    "6J": {
+        "point_value": 125000,
+        "tick_size": 5e-05
+    }
+}
+
 class FunctionCalls:
     def __init__(self):
         url = 'http://73.241.173.17:8086'
         token = 'WrSMwFo5b-ngd_gMqp1ZjGijae9QtQRKlNXd9U_8ExvcY0oVjQjZ7-dtmruJX_joU_pMzH72YUibcOX7XrvbBw=='
         org = 'TenSurf'
         self.bronze_client = InfluxClient(token, org, url, 'bronze')
+        self.url = url
+        self.token = token
+        self.org = org
 
-    def detect_trend(self, parameters):  
-        #trends range are in [-3,3]
-        #-3 represents a strong downtrend, -2: moderate downtrend, -1: weak downtrend, 0: neutral, 
-        #1: weak uptrend, 2: moderate uptrend, and 3: strong uptrend.
-        
-        # getting parameters
+    def detect_trend(self, parameters):
+        # trends range are in [-3,3]
+        # -3 represents a strong downtrend, -2: moderate downtrend, -1: weak downtrend, 0: neutral,
+        # 1: weak uptrend, 2: moderate uptrend, and 3: strong uptrend.
         symbol = parameters["symbol"]
         start_datetime = parameters["start_datetime"]
         end_datetime = parameters["end_datetime"]
-        
         if end_datetime is None:
             end_datetime = datetime.now()
         if start_datetime is None:
-            start_datetime =  end_datetime - timedelta(days=7)
+            start_datetime = end_datetime - timedelta(days=7)
         if isinstance(start_datetime, str):
             start_datetime = pd.to_datetime(start_datetime)
         if isinstance(end_datetime, str):
@@ -656,28 +779,368 @@ class FunctionCalls:
         else:
             data_dict = df.to_dict(orient='list')
             data_index = data_dict['_time']
-            return find_trend(data_dict, data_index, 0, len(data_index)  - 1)
+            return find_trend(data_dict, data_index, 0, len(data_index) - 1)
 
     def calculate_sr(self, parameters):
-        # getting parameters
         symbol = parameters["symbol"]
         timeframe = parameters["timeframe"]
         lookback_days = int(parameters["lookback_days"].split(" ")[0])
-        
         end_datetime = datetime.now()
-        start_datetime =  end_datetime - timedelta(days=lookback_days)
+        start_datetime = end_datetime - timedelta(days=lookback_days)
         df = self.bronze_client.retrieve_db_df_between(symbol, start_datetime, end_datetime)
         if df is None or len(df) == 0:
             print('There is no data for this period of time...')
             return 0
-        df['DateTime'] = pd.to_datetime(df['DateTime'])
-        df = df.set_index('DateTime')
-        params = {'agglomerative': {'window_size': {'1h':2,'1d':2,'1w':2,'1min':5}, 'use_maxima': True, 'merge_percent': {'1h':.5,'1d':.5,'1w':.25,'1min':.75}, 'max_cross': 2,
-                                    'score': 'power','closeness': {'1h':.25,'1d':.25,'1w':.25,'1min':.25}}}
+        df = df.set_index('_time')
+        params = {'agglomerative': {'window_size': {'1h': 2, '1d': 2, '1w': 2, '1min': 5}, 'use_maxima': True,
+                                    'merge_percent': {'1h': .5, '1d': .5, '1w': .25, '1min': .75}, 'max_cross': 2,
+                                    'score': 'power', 'closeness': {'1h': .25, '1d': .25, '1w': .25, '1min': .25}}}
         detector = SRDetector(df, timeframe, params, 'agglomerative')
         detector.get_levels()
         levels = list(detector.lines.keys())
         start_times = [detector.lines[x]['time'] for x in levels]
-        end_datetimes = [df.index[-1]]*len(levels)
+        end_datetimes = [df.index[-1]] * len(levels)
         scores = [detector.lines[x]['importance'] for x in levels]
         return [levels, start_times, end_datetimes, scores]
+
+    def round(self, x):
+        coef = 1 / self.ticksize
+        return round(x * coef) / coef
+    
+    def calculate_sl(self, parameters):
+        def get_vwap_stop(vwap_level_names, vwap_values, fill_price, direction):
+            delta_vwap = vwap_values[1] - vwap_values[0]
+            if direction == 1:
+                for i in range(1, 8):
+                    if vwap_values[i] <= fill_price <= vwap_values[i + 1]:
+                        return vwap_values[i - 1], vwap_level_names[i - 1]
+                if fill_price > vwap_values[-1]:
+                    dist = np.floor((fill_price - vwap_values[-1]) / delta_vwap)
+                    name = f'{vwap_level_names[-1][:-1]}{int(4 + dist - 1)}'
+                    return vwap_values[-1] + (dist - 1) * delta_vwap, name
+                if fill_price > vwap_values[0]:
+                    return vwap_values[0] - delta_vwap, f'{vwap_level_names[0][:-1]}5'
+                dist = np.ceil((vwap_values[0] - fill_price) / delta_vwap)
+                name = f'{vwap_level_names[0][:-1]}{int(4 + dist + 1)}'
+                return vwap_values[0] - (dist + 1) * delta_vwap, name
+            else:  # direction == -1
+                for i in range(1, 8):
+                    if vwap_values[i - 1] <= fill_price <= vwap_values[i]:
+                        return vwap_values[i + 1], vwap_level_names[i + 1]
+                if fill_price < vwap_values[0]:
+                    dist = np.floor((vwap_values[0] - fill_price) / delta_vwap)
+                    name = f'{vwap_level_names[0][:-1]}{int(4 + dist - 1)}'
+                    return vwap_values[0] - (dist - 1) * delta_vwap, name
+                if fill_price < vwap_values[-1]:
+                    return vwap_values[-1] + delta_vwap, f'{vwap_level_names[-1][:-1]}5'
+                dist = np.ceil((fill_price - vwap_values[-1]) / delta_vwap)
+                name = f'{vwap_level_names[-1][:-1]}{int(4 + dist + 1)}'
+                return vwap_values[-1] + (dist + 1) * delta_vwap, name
+
+        symbol = parameters["symbol"]
+        ticksize = config[symbol]['tick_size']
+        self.ticksize = ticksize
+        direction = parameters["direction"]
+        method = parameters["method"] if 'method' in parameters else 'nothing'
+        if method is None or method == '' or method == 'all':
+            method = 'nothing'
+        neighborhood = parameters["neighborhood"] if 'neighborhood' in parameters else 20
+        atr_coef = parameters["atr_coef"] if 'atr_coef' in parameters else 1.5
+        lookback = parameters["lookback"] if 'lookback' in parameters else 100
+        min_sl_ticks = parameters["min_sl_ticks"] if 'min_sl_ticks' in parameters else 4
+        minimum_risk = min_sl_ticks * ticksize
+        end_datetime = datetime.now()
+        start_datetime = end_datetime - timedelta(days=4)
+        df = self.bronze_client.retrieve_db_df_between(symbol, start_datetime, end_datetime)
+        if df is None or len(df) == 0:
+            print('There is no data for this period of time...')
+            return {}
+        siver_client = InfluxClient(self.token, self.org, self.url, 'silver')
+        df = df.iloc[-23 * 60:]  # Approximately last one day
+        data_dict = df.to_dict(orient='list')
+        data_index = data_dict['DateTime']
+        atr = data_dict['ATR'][-1]
+        current_index = len(data_dict['close']) - 1
+        fill_price = data_dict['close'][current_index]
+        answer = {'sl': [], 'risk': [], 'info': []}
+        sl_dict = {}
+        if method in ['swing', 'nothing']:
+            if direction == 1:
+                data = np.array(data_dict['low'])
+                swing_indices = argrelextrema(data, lambda x, y: x < y, order=neighborhood, mode='clip')[0]
+                if len(swing_indices) and swing_indices[0] < neighborhood:
+                    swing_indices = swing_indices[1:]
+                if len(swing_indices) and swing_indices[-1] > len(data) - neighborhood // 2:
+                    swing_indices = swing_indices[:-1]
+                for x in swing_indices[::-1]:
+                    if data[x] < fill_price - minimum_risk:
+                        sl_dict['swing'] = data[x]
+                        answer['sl'].append(self.round(data[x]))
+                        answer['risk'].append(self.round(abs(fill_price - data[x])))
+                        answer['info'].append(
+                            f'calculated based on low swing with neighborhood parameter of {neighborhood} candles')
+            else:
+                data = np.array(data_dict['high'])
+                swing_indices = argrelextrema(data, lambda x, y: x > y, order=neighborhood, mode='clip')[0]
+                if len(swing_indices) and swing_indices[0] < neighborhood:
+                    swing_indices = swing_indices[1:]
+                if len(swing_indices) and swing_indices[-1] > len(data) - neighborhood // 2:
+                    swing_indices = swing_indices[:-1]
+                for x in swing_indices[::-1]:
+                    if data[x] > fill_price + minimum_risk:
+                        sl_dict['swing'] = data[x]
+                        answer['sl'].append(self.round(data[x]))
+                        answer['risk'].append(self.round(abs(fill_price - data[x])))
+                        answer['info'].append(
+                            f'calculated based on high swing with neighborhood parameter of {neighborhood} candles')
+        if method in ['minmax', 'nothing']:
+            if direction == 1:
+                mm_stop = min(data_dict['low'][- lookback:])
+                sl_dict['minmax'] = mm_stop
+                answer['sl'].append(self.round(mm_stop))
+                answer['risk'].append(self.round(abs(fill_price - mm_stop)))
+                answer['info'].append(f'calculated based on minimum low price of previous {lookback} candles')
+
+            else:
+                mm_stop = min(data_dict['high'][- lookback:])
+                sl_dict['minmax'] = mm_stop
+                answer['sl'].append(self.round(mm_stop))
+                answer['risk'].append(self.round(abs(fill_price - mm_stop)))
+                answer['info'].append(f'calculated based on maximum high price of previous {lookback} candles')
+
+        if method in ['atr', 'nothing']:
+            if direction == 1:
+                atr_stop = fill_price - atr_coef * atr
+            else:
+                atr_stop = fill_price + atr_coef * atr
+            sl_dict['atr'] = atr_stop
+            answer['sl'].append(self.round(atr_stop))
+            answer['risk'].append(self.round(abs(fill_price - atr_stop)))
+            answer['info'].append(f'calculated based on ATR with length 14 multiplied by the coefficient {atr_coef}')
+        if method in ['DVWAP_band', 'nothing']:
+            vwap_level_names = [f'VWAP_Bottom_Band_{i}' for i in range(4, 0, -1)] + ['VWAP'] + [f'VWAP_Top_Band_{i}'
+                                                                                                    for
+                                                                                                    i in
+                                                                                                    range(1, 5)]
+            vwap_values = [data_dict[x][-1] for x in vwap_level_names]
+            vwap_stop, level_name = get_vwap_stop(vwap_level_names, vwap_values, fill_price, direction)
+            answer['sl'].append(self.round(vwap_stop))
+            answer['risk'].append(self.round(abs(fill_price - vwap_stop)))
+            if level_name == 'VWAP':
+                level_number = 0
+            elif 'Top' in level_name:
+                level_number = int(level_name.split('_')[-1])
+            else:
+                level_number = -1 * int(level_name.split('_')[-1])
+            if direction == 1:
+                if level_number >= 0:
+                    cur_level = level_number + 2
+                    bottop = level_number + 1
+                else:
+                    cur_level = level_number + 1
+                    bottop = level_number
+                    if level_number == -1: cur_level += 1
+            else:
+                if level_number <= 0:
+                    cur_level = level_number - 2
+                    bottop = level_number - 1
+                else:
+                    cur_level = level_number - 1
+                    bottop = level_number
+                    if level_number == 1: cur_level -= 1
+
+            if direction == 1:
+                answer['info'].append(
+                    f'calculated based on {level_name} as the bottom of vwap zone {bottop} (current price is inside vwap zone {cur_level})')
+            else:
+                answer['info'].append(
+                    f'calculated based on {level_name} as the ceiling of vwap zone {bottop} (current price is inside vwap zone {cur_level})')
+        if method in ['WVWAP_band', 'nothing']:
+            vwap_level_names = [f'WVWAP_Bottom_Band_{i}' for i in range(4, 0, -1)] + ['WVWAP'] + [
+                f'WVWAP_Top_Band_{i}'
+                for i in
+                range(1, 5)]
+            vwap_values = [data_dict[x][-1] for x in vwap_level_names]
+            vwap_stop, level_name = get_vwap_stop(vwap_level_names, vwap_values, fill_price, direction)
+            answer['sl'].append(self.round(vwap_stop))
+            answer['risk'].append(self.round(abs(fill_price - vwap_stop)))
+            if level_name == 'WVWAP':
+                level_number = 0
+            elif 'Top' in level_name:
+                level_number = int(level_name.split('_')[-1])
+            else:
+                level_number = -1 * int(level_name.split('_')[-1])
+            if direction == 1:
+                if level_number >= 0:
+                    cur_level = level_number + 2
+                    bottop = level_number + 1
+                else:
+                    cur_level = level_number + 1
+                    bottop = level_number
+                    if level_number == -1: cur_level += 1
+            else:
+                if level_number <= 0:
+                    cur_level = level_number - 2
+                    bottop = level_number - 1
+                else:
+                    cur_level = level_number - 1
+                    bottop = level_number
+                    if level_number == 1: cur_level -= 1
+
+            if direction == 1:
+                answer['info'].append(
+                    f'calculated based on {level_name} as the bottom of wvwap zone {bottop} (current price is inside wvwap zone {cur_level})')
+            else:
+                answer['info'].append(
+                    f'calculated based on {level_name} as the ceiling of wvwap zone {bottop} (current price is inside wvwap zone {cur_level})')
+        if method in ['zigzag', 'level', 'nothing']:
+            # Read Silver data
+            sdf = siver_client.retrieve_db_df_between(symbol, start_datetime, end_datetime)
+            sdf = sdf.iloc[-1]
+        if method in ['zigzag', 'nothing']:
+            if direction == 1:
+                zz_stop = fill_price  - sdf['ZZ_rth_last5']
+            else:
+                zz_stop = fill_price + sdf['ZZ_rth_last5']
+            answer['sl'].append(self.round(zz_stop))
+            answer['risk'].append(self.round(abs(fill_price - zz_stop)))
+            answer['info'].append(f'Calculated based on the last 5 zigzag legs of the same day of the week')
+            if direction == 1:
+                zz_stop = fill_price  - sdf['ZZ_rth_daily']
+            else:
+                zz_stop = fill_price + sdf['ZZ_rth_daily']
+            answer['sl'].append(self.round(zz_stop))
+            answer['risk'].append(self.round(abs(fill_price - zz_stop)))
+            answer['info'].append(f'Calculated based on the last session zigzag')
+
+        if method in ['level', 'nothing']:
+            answer = {'sl': [], 'risk': [], 'info': []}
+            vwap_level_names = [f'VWAP_Bottom_Band_{i}' for i in range(4, 0, -1)] + ['VWAP'] + [f'VWAP_Top_Band_{i}' for
+                                                                                                i in
+                                                                                                range(1, 5)]
+            vwap_level_names += [f'WVWAP_Bottom_Band_{i}' for i in range(4, 0, -1)] + ['WVWAP'] + [f'WVWAP_Top_Band_{i}'
+                                                                                                   for i in
+                                                                                                   range(1, 5)]
+            vwap_values = [data_dict[x][-1] for x in vwap_level_names]
+            initial_level_names = ['VP_POC', 'VP_VAL', 'VP_VAH', 'Overnight_high', 'Overnight_low', 'Overnight_mid',
+                                   'initial_balance_high',
+                                   'initial_balance_low', 'initial_balance_mid', 'prev_session_max', 'prev_session_min',
+                                   'prev_session_mid']
+            level_names = []
+            level_values = []
+            for i in range(len(initial_level_names)):
+                level = initial_level_names[i]
+                if direction == 1 and sdf[level] < fill_price - minimum_risk or direction == -1 and sdf[
+                    level] > fill_price + minimum_risk:
+                    level_values.append(sdf[level])
+                    level_names.append(level)
+            for i in range(len(vwap_level_names)):
+                level = vwap_level_names[i]
+                if direction == 1 and vwap_values[i] < fill_price - minimum_risk or direction == -1 and vwap_values[
+                    i] > fill_price + minimum_risk:
+                    level_values.append(vwap_values[i])
+                    level_names.append(level)
+            for x, y in zip(level_names, level_values):
+                answer['sl'].append(self.round(y))
+                answer['risk'].append(self.round(abs(fill_price - y)))
+                answer['info'].append(f'calculated based on the level {x}')
+
+            best_level = {}
+            for col in [ 'weekly_SR', 'daily_SR', 'hourly_SR','5min_SR']:
+                if col not in sdf:
+                    continue
+                sr_levels = eval(sdf[col])
+                for i, val in enumerate(sr_levels['values']):
+                    if direction == 1 and val < fill_price - minimum_risk:
+                        if col not in best_level or val > best_level[col]['sl']:
+                            best_level[col] = {'sl': val, 'info':f'calculate based on {" ".join(col.split("_"))} level starting from {sr_levels["start_time"][i]}'}
+                    if direction == -1 and val > fill_price + minimum_risk:
+                        if col not in best_level or val < best_level[col]['sl']:
+                            best_level[col] = {'sl': val, 'info':f'calculate based on {" ".join(col.split("_"))} level starting from {sr_levels["start_time"][i]}'}
+            for col in best_level:
+                answer['sl'].append(self.round(best_level[col]['sl']))
+                answer['risk'].append(self.round(abs(fill_price - best_level[col]['sl'])))
+                answer['info'].append(best_level[col]['info'])
+        if direction == 1:
+            sorted_items = sorted(zip(answer['sl'], answer['risk'], answer['info']), key=lambda x: x[0], reverse=True)
+        else:
+            sorted_items = sorted(zip(answer['sl'], answer['risk'], answer['info']), key=lambda x: x[0])
+        return {'sl': [item[0] for item in sorted_items],
+                'risk': [item[1] for item in sorted_items],
+                'info': [item[2] for item in sorted_items]}
+
+
+    def calculate_tp(self, parameters):
+        symbol = parameters["symbol"]
+        ticksize = config[symbol]['tick_size']
+        self.ticksize = ticksize
+        direction = parameters["direction"]
+        sl = parameters["stoploss"]
+        method = parameters["method"] if 'method' in parameters else 'nothing'
+        end_datetime = datetime.now()
+        start_datetime = end_datetime - timedelta(days=4)
+        df = self.bronze_client.retrieve_db_df_between(symbol, start_datetime, end_datetime)
+        if df is None or len(df) == 0:
+            print('There is no data for this period of time...')
+            return {}
+        siver_client = InfluxClient(self.token, self.org, self.url, 'silver')
+        df = df.iloc[-23 * 60:]  # Approximately last one day
+        data_dict = df.to_dict(orient='list')
+        data_index = data_dict['DateTime']
+        atr = data_dict['ATR'][-1]
+        current_index = len(data_dict['close']) - 1
+        fill_price = data_dict['close'][current_index]
+        risk = abs(fill_price - sl)
+        answer = {'tp': [], 'info': []}
+        sdf = siver_client.retrieve_db_df_between(symbol, start_datetime, end_datetime)
+        sdf = sdf.iloc[-1]
+        answer = {'tp': [], 'info': []}
+        vwap_level_names = [f'VWAP_Bottom_Band_{i}' for i in range(4, 0, -1)] + ['VWAP'] + [f'VWAP_Top_Band_{i}' for
+                                                                                            i in
+                                                                                            range(1, 5)]
+        vwap_level_names += [f'WVWAP_Bottom_Band_{i}' for i in range(4, 0, -1)] + ['WVWAP'] + [f'WVWAP_Top_Band_{i}'
+                                                                                               for i in
+                                                                                               range(1, 5)]
+        vwap_values = [data_dict[x][-1] for x in vwap_level_names]
+        initial_level_names = ['VP_POC', 'VP_VAL', 'VP_VAH', 'Overnight_high', 'Overnight_low', 'Overnight_mid',
+                               'initial_balance_high',
+                               'initial_balance_low', 'initial_balance_mid', 'prev_session_max', 'prev_session_min',
+                               'prev_session_mid']
+        level_names = []
+        level_values = []
+        for i in range(len(initial_level_names)):
+            level = initial_level_names[i]
+            if direction == 1 and sdf[level] > fill_price + risk or direction == -1 and sdf[
+                level] < fill_price - risk:
+                level_values.append(sdf[level])
+                level_names.append(level)
+        for i in range(len(vwap_level_names)):
+            level = vwap_level_names[i]
+            if direction == 1 and  vwap_values[i] > fill_price + risk or direction == -1 and vwap_values[i] < fill_price - risk:
+                level_values.append(vwap_values[i])
+                level_names.append(level)
+        for x, y in zip(level_names, level_values):
+            answer['tp'].append(self.round(y))
+            answer['info'].append(f'calculated based on the level {x}')
+
+        best_level = {}
+        for col in [ 'weekly_SR', 'daily_SR', 'hourly_SR','5min_SR']:
+            if col not in sdf:
+                continue
+            sr_levels = eval(sdf[col])
+            for i, val in enumerate(sr_levels['values']):
+                if direction == 1 and val > fill_price + risk:
+                    if col not in best_level or val < best_level[col]['tp']:
+                        best_level[col] = {'tp': val, 'info':f'calculate based on {" ".join(col.split("_"))} level starting from {str(sr_levels["start_time"][i])[:19]}'}
+                if direction == -1 and val > fill_price + risk:
+                    if col not in best_level or val < best_level[col]['tp']:
+                        best_level[col] = {'tp': val, 'info':f'calculate based on {" ".join(col.split("_"))} level starting from {str(sr_levels["start_time"][i])[:19]}'}
+        for col in best_level:
+            answer['tp'].append(self.round(best_level[col]['tp']))
+            answer['info'].append(best_level[col]['info'])
+        if direction == -1:
+            sorted_items = sorted(zip(answer['tp'], answer['info']), key=lambda x: x[0], reverse=True)
+        else:
+            sorted_items = sorted(zip(answer['tp'], answer['info']), key=lambda x: x[0])
+        return {'tp': [item[0] for item in sorted_items],
+                'info': [item[1] for item in sorted_items]}
