@@ -28,7 +28,7 @@ from gpt.functions_python import *
 from gpt.utils import date_validation, monthdelta
 from io import BufferedReader, StringIO
 import config
-from datetime import timezone
+from datetime import timezone, datetime
 
 
 class FileProcessor:
@@ -86,9 +86,9 @@ class FileProcessor:
                     results += assistant_message.content + "\n"
                 function_name = chat_response.choices[0].message.function_call.name
                 function_arguments = json.loads(chat_response.choices[0].message.function_call.arguments)
-                FC = functions_python.FunctionCalls()
+                FC = FunctionCalls()
                 print(f"\n{chat_response.choices[0].message}\n")
-                now = functions_python.datetime.now()
+                now = datetime.now()
 
                 if function_name == "detect_trend":
                     correct_dates = True
@@ -172,7 +172,11 @@ class FileProcessor:
                     chat_response = get_response(
                         messages, functions, config.azure_GPT_MODEL_3, "auto"
                     )
-                    results += chat_response.choices[0].message.content
+                    results = {
+                        'content': results + chat_response.choices[0].message.content,
+                        'levels': { 'value': sr_value, 'start': sr_start_date, 'end': sr_end_date, 'importance': sr_importance }
+                    }
+                    
 
                 elif function_name == "calculate_sl":
                     stoploss = FC.calculate_sl(function_arguments)
@@ -188,11 +192,8 @@ class FileProcessor:
                     chat_response = get_response(
                         messages, functions, self.GPT_MODEL, "auto"
                     )
+                    results += chat_response.choices[0].message.content
                     
-                    results = {
-                        'content': results + chat_response.choices[0].message.content,
-                        'levels': { 'value': sr_value, 'start': sr_start_date, 'end': sr_end_date, 'importance': sr_importance }
-                    }
 
                 else:
                     raise ValueError(f"{chat_response.choices[0].message}")
