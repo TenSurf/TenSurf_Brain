@@ -66,7 +66,7 @@ class FileProcessor:
         
         relevance_check = self.is_TunSurf_related(content)
         if "irrelevant" in relevance_check.lower():
-            return "Your ask is irrelevant, please write a new one."
+            return "I appreciate your interest, but my capabilities are focused on providing information and assistance relating to trading in financial markets. If you have questions about trading concepts, platforms, or historical market trends and levels, I'm here to help!"
         
         def get_response(messages, functions, model, function_call, temperature=0.2):
             response = self.client.chat.completions.create(
