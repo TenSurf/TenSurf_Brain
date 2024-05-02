@@ -27,7 +27,6 @@ from gpt.functions_json import functions
 from gpt.functions_python import *
 from gpt.utils import date_validation, monthdelta
 from io import BufferedReader, StringIO
-import config
 from datetime import timezone, datetime
 
 
@@ -169,7 +168,7 @@ class FileProcessor:
                     sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
                     messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. If the user didn't specified lookback_days or timeframe parameters, introduce these parameters to them so that they can use these parameters. Now generate a proper response"})
                     chat_response = get_response(
-                        messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        messages, functions, self.GPT_MODEL, "auto"
                     )
                     results = {
                         'content': results + chat_response.choices[0].message.content,
@@ -181,7 +180,7 @@ class FileProcessor:
                     stoploss = FC.calculate_sl(function_arguments)
                     messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {stoploss}. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. The unit of every number in the answer should be mentioned. Now generate a proper response"})
                     chat_response = get_response(
-                        messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        messages, functions, self.GPT_MODEL, "auto"
                     )
                     results += chat_response.choices[0].message.content
 
