@@ -29,3 +29,10 @@ def monthdelta(date, delta):
         29 if y%4==0 and (not y%100==0 or y%400 == 0) else 28,
         31,30,31,30,31,31,30,31,30,31][m-1])
     return date.replace(day=d,month=m, year=y)
+
+
+
+# Hard Code Introduction
+introduction = '\
+This is an AI  \
+'

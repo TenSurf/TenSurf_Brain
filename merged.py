@@ -28,6 +28,7 @@ from gpt.functions_python import *
 from gpt.utils import date_validation, monthdelta
 from io import BufferedReader, StringIO
 from datetime import timezone, datetime
+from input_filter import *
 
 
 class FileProcessor:
@@ -58,7 +59,7 @@ class FileProcessor:
         #print(response)
         return response.choices[0].message.content
 
-    def chat_with_ai(self, messages: list, content: str):
+    def chat_with_ai(self, messages: list, content: str, front_json: dict):
         if not content:
             return ""
         
@@ -88,62 +89,66 @@ class FileProcessor:
                 print(f"\n{chat_response.choices[0].message}\n")
                 now = datetime.now()
 
+                # Filtering Inputs
+                function_arguments = input_filter(function_name, function_arguments, front_json)
                 if function_name == "detect_trend":
-                    correct_dates = True
-                    # validating dates
-                    if "start_datetime" in function_arguments or "end_datetime" in function_arguments:
-                        correct_dates = False
-                        # checking the format
-                        if not (date_validation(function_arguments["start_datetime"]) or date_validation(function_arguments["end_datetime"])):
-                            results += "Please enter dates in the following foramat: %d/%m/%Y %H:%M:%S or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
-                        # if start_datetime or end_datetime were in the future
-                        elif (now < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S')) or (now < datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')):
-                            results += "Dates should not be in the future!"
-                        # if end is before start
-                        elif datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S') < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S'):
-                            results += "End date time should be after start date time!"
-                        # formates are correct
-                        elif "lookback" in function_arguments and "start_datetime" in function_arguments:
-                            results += "Both lookback and datetimes could not be valued"
-                        # dates are valid
-                        else:
-                            correct_dates = True
+                    # correct_dates = True
+                    # # validating dates
+                    # if "start_datetime" in function_arguments or "end_datetime" in function_arguments:
+                    #     correct_dates = False
+                    #     # checking the format
+                    #     if not (date_validation(function_arguments["start_datetime"]) or date_validation(function_arguments["end_datetime"])):
+                    #         results += "Please enter dates in the following foramat: %d/%m/%Y %H:%M:%S or specify a period of time whether for the past seconds or minutes or hours or days or weeks or years."
+                    #     # if start_datetime or end_datetime were in the future
+                    #     elif (now < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S')) or (now < datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')):
+                    #         results += "Dates should not be in the future!"
+                    #     # if end is before start
+                    #     elif datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S') < datetime.strptime(function_arguments["start_datetime"], '%d/%m/%Y %H:%M:%S'):
+                    #         results += "End date time should be after start date time!"
+                    #     # formates are correct
+                    #     elif "lookback" in function_arguments and "start_datetime" in function_arguments:
+                    #         results += "Both lookback and datetimes could not be valued"
+                    #     # dates are valid
+                    #     else:
+                    #         correct_dates = True
                     
-                    # if loookback and end_datetime were specified
-                    if ("lookback" in function_arguments and "end_datetime" in function_arguments) and correct_dates:
-                        end_datetime = datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')
-                        k = int(function_arguments["lookback"].split(" ")[0])
-                        function_arguments["start_datetime"] = f"{end_datetime - timedelta(days=k)}"
+                    # # if loookback and end_datetime were specified
+                    # if ("lookback" in function_arguments and "end_datetime" in function_arguments) and correct_dates:
+                    #     end_datetime = datetime.strptime(function_arguments["end_datetime"], '%d/%m/%Y %H:%M:%S')
+                    #     k = int(function_arguments["lookback"].split(" ")[0])
+                    #     function_arguments["start_datetime"] = f"{end_datetime - timedelta(days=k)}"
                     
-                    # handling the default values when none of the parameters were specified
-                    elif ("lookback" not in function_arguments) and correct_dates:
-                        if "symbol" not in function_arguments:
-                            function_arguments["symbol"] = "NQ"
-                        if "start_datetime" not in function_arguments:
-                            function_arguments["start_datetime"] = f"{now - timedelta(days=10)}"
-                        if "end_datetime" not in function_arguments:
-                            function_arguments["end_datetime"] = f"{now}"
+                    # # handling the default values when none of the parameters were specified
+                    # elif ("lookback" not in function_arguments) and correct_dates:
+                    #     if "symbol" not in function_arguments:
+                    #         function_arguments["symbol"] = "NQ"
+                    #     if "start_datetime" not in function_arguments:
+                    #         function_arguments["start_datetime"] = f"{now - timedelta(days=10)}"
+                    #     if "end_datetime" not in function_arguments:
+                    #         function_arguments["end_datetime"] = f"{now}"
                     
-                    # if just lookback was specified
-                    elif correct_dates:
-                        function_arguments["end_datetime"] = f"{now}"
-                        k = int(function_arguments["lookback"].split(" ")[0])
-                        if function_arguments["lookback"].split(" ")[-1] == "seconds" or function_arguments["lookback"].split(" ")[-1] == "second":
-                            function_arguments["start_datetime"] = f"{now - timedelta(seconds=k)}"
-                        elif function_arguments["lookback"].split(" ")[-1] == "minutes" or function_arguments["lookback"].split(" ")[-1] == "minute":
-                            function_arguments["start_datetime"] = f"{now - timedelta(minutes=k)}"
-                        elif function_arguments["lookback"].split(" ")[-1] == "hours" or function_arguments["lookback"].split(" ")[-1] == "hour":
-                            function_arguments["start_datetime"] = f"{now - timedelta(hours=k)}"
-                        elif function_arguments["lookback"].split(" ")[-1] == "days" or function_arguments["lookback"].split(" ")[-1] == "day":
-                            function_arguments["start_datetime"] = f"{now - timedelta(days=k)}"
-                        elif function_arguments["lookback"].split(" ")[-1] == "weeks" or function_arguments["lookback"].split(" ")[-1] == "week":
-                            function_arguments["start_datetime"] = f"{now - timedelta(weeks=k)}"
-                        elif function_arguments["lookback"].split(" ")[-1] == "months" or function_arguments["lookback"].split(" ")[-1] == "month":
-                            function_arguments["start_datetime"] = f"{monthdelta(now, -k)}"
-                        elif function_arguments["lookback"].split(" ")[-1] == "years" or function_arguments["lookback"].split(" ")[-1] == "year":
-                            function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
-                        else:
-                            raise ValueError("wrong value of time")
+                    # # if just lookback was specified
+                    # elif correct_dates:
+                    #     function_arguments["end_datetime"] = f"{now}"
+                    #     k = int(function_arguments["lookback"].split(" ")[0])
+                    #     if function_arguments["lookback"].split(" ")[-1] == "seconds" or function_arguments["lookback"].split(" ")[-1] == "second":
+                    #         function_arguments["start_datetime"] = f"{now - timedelta(seconds=k)}"
+                    #     elif function_arguments["lookback"].split(" ")[-1] == "minutes" or function_arguments["lookback"].split(" ")[-1] == "minute":
+                    #         function_arguments["start_datetime"] = f"{now - timedelta(minutes=k)}"
+                    #     elif function_arguments["lookback"].split(" ")[-1] == "hours" or function_arguments["lookback"].split(" ")[-1] == "hour":
+                    #         function_arguments["start_datetime"] = f"{now - timedelta(hours=k)}"
+                    #     elif function_arguments["lookback"].split(" ")[-1] == "days" or function_arguments["lookback"].split(" ")[-1] == "day":
+                    #         function_arguments["start_datetime"] = f"{now - timedelta(days=k)}"
+                    #     elif function_arguments["lookback"].split(" ")[-1] == "weeks" or function_arguments["lookback"].split(" ")[-1] == "week":
+                    #         function_arguments["start_datetime"] = f"{now - timedelta(weeks=k)}"
+                    #     elif function_arguments["lookback"].split(" ")[-1] == "months" or function_arguments["lookback"].split(" ")[-1] == "month":
+                    #         function_arguments["start_datetime"] = f"{monthdelta(now, -k)}"
+                    #     elif function_arguments["lookback"].split(" ")[-1] == "years" or function_arguments["lookback"].split(" ")[-1] == "year":
+                    #         function_arguments["start_datetime"] = f"{now - relativedelta(years=k)}"
+                    #     else:
+                    #         raise ValueError("wrong value of time")
+                    
+                    function_arguments, results, correct_dates = function_arguments
 
                     # results will be generated only when dates are in the correct format
                     if correct_dates:
@@ -158,14 +163,19 @@ class FileProcessor:
 
                 elif function_name == "calculate_sr":
                     # correcting function_arguments
-                    if "symbol" not in function_arguments:
-                        function_arguments["symbol"] = "ES"
-                    if "timeframe" not in function_arguments:
-                        function_arguments["timeframe"] = "1h"
-                    if "lookback_days" not in function_arguments:
-                        function_arguments["lookback_days"] = "10 days"
+                    # if "symbol" not in function_arguments:
+                    #     function_arguments["symbol"] = "ES"
+                    # if "timeframe" not in function_arguments:
+                    #     function_arguments["timeframe"] = "1h"
+                    # if "lookback_days" not in function_arguments:
+                    #     function_arguments["lookback_days"] = "10 days"
 
                     sr_value, sr_start_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
+                    timezone_number = int(front_json["timezone"])
+                    for date in sr_start_date:
+                        date -= timedelta(minutes=timezone_number)
+                    for date in sr_end_date:
+                        date -= timedelta(minutes=timezone_number)
                     messages.append({"role": "system", "content": f"The result of the function calling with function {function_name} has become {sr_value} for levels_prices, {sr_start_date} for levels_start_timestamps, {sr_end_date} for levels_end_timestamps and {sr_importance} for levels_scores. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. If the user didn't specified lookback_days or timeframe parameters, introduce these parameters to them so that they can use these parameters. Now generate a proper response"})
                     chat_response = get_response(
                         messages, functions, self.GPT_MODEL, "auto"
@@ -194,11 +204,11 @@ class FileProcessor:
                     
 
                 else:
-                    raise ValueError(f"{chat_response.choices[0].message}")
+                    results += f"{chat_response.choices[0].message.content}"
                 
             return results
         
-        messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
+        messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous. Make sure to restrict your function calls to the following provided list: detect_trend, calculate_sr, calculate_sl, calculate_tp. Do not assume the availability of any functions beyond those explicitly listed. Ensure that your implementations and queries adhere strictly to the functions specified."})
         messages.append({"role": "user", "content": content})
         response = get_response(messages, functions, self.GPT_MODEL, "auto")
         res = get_result(messages, response)

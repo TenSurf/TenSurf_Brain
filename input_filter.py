@@ -3,7 +3,7 @@ from utils import monthdelta, datetime, timedelta, date_validation, relativedelt
 date_format = "%m/%d/%y %H:%M:%S"
 
 # setting the given time with the clock of the server
-def change_time_zone(str_date: str, timezone: int) -> str:
+def change_time_zone(str_date: str, timezone: int, date_format=date_format) -> str:
     date = datetime.strptime(str_date, date_format)
     date += timedelta(minutes=timezone)
     return f"{date}"
@@ -12,8 +12,8 @@ def change_time_zone(str_date: str, timezone: int) -> str:
 front_end_json_sample = {
 'symbol': 'NQ',
 'timeframe': '1min',
-'chart_start_time': '2024-04-17T02:00:00Z',
-'chart_end_time': '2024-04-18T15:00:00Z',
+'start_datetime': '2024-04-17T02:00:00Z',
+'end_datetime': '2024-04-18T15:00:00Z',
 'timezone': -210,
 'user_id': 10,
 'history_message': [{"role": 'system', "content": '...'}, {"role": 'user', "content": '...'}, ...],
@@ -31,6 +31,7 @@ def input_filter(function_name: str, function_arguments: dict, front_json: dict)
         timezone = int(front_json["timezone"])
         correct_dates = True
         # validating dates
+        results = ""
         if "start_datetime" in function_arguments or "end_datetime" in function_arguments:
             correct_dates = False
             # checking the format
