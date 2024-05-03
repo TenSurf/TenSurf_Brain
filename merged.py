@@ -27,7 +27,7 @@ from gpt.functions_json import functions
 from gpt.functions_python import *
 from gpt.utils import date_validation, monthdelta
 from io import BufferedReader, StringIO
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 from gpt.input_filter import *
 
 
