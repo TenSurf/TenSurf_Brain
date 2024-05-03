@@ -1,4 +1,4 @@
-from utils import monthdelta, datetime, timedelta, date_validation, relativedelta
+from gpt.utils import monthdelta, datetime, timedelta, date_validation, relativedelta
 
 date_format = "%m/%d/%y %H:%M:%S"
 
