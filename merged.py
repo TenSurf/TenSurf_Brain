@@ -28,7 +28,7 @@ from gpt.functions_python import *
 from gpt.utils import date_validation, monthdelta
 from io import BufferedReader, StringIO
 from datetime import timezone, datetime
-from input_filter import *
+from gpt.input_filter import *
 
 
 class FileProcessor:
@@ -405,7 +405,7 @@ class FileProcessor:
             print(f"An error occurred while getting content: {e}")
         return content.strip()
 
-    def get_user_input(self, file, prompt: Optional[str], messages: Optional[list]) -> str:
+    def get_user_input(self, file, prompt: Optional[str], messages: Optional[list], front_json: Optional[dict]) -> str:
         content = ""
         if file:
             file_content = self.get_content(file)
@@ -413,4 +413,4 @@ class FileProcessor:
                 content += file_content + "\n"
         if prompt:
             content += prompt + "\n"
-        return self.chat_with_ai(messages=messages,content=content.strip())
+        return self.chat_with_ai(messages=messages,content=content.strip(),front_json=front_end_json_sample)
