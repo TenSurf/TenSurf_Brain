@@ -413,4 +413,4 @@ class FileProcessor:
                 content += file_content + "\n"
         if prompt:
             content += prompt + "\n"
-        return self.chat_with_ai(messages=messages,content=content.strip(),front_json=front_end_json_sample)
+        return self.chat_with_ai(messages=messages,content=content.strip(), front_json=front_json)
