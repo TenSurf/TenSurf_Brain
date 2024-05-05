@@ -47,8 +47,12 @@ class FileProcessor:
                 api_version=self.api_version,
                 azure_endpoint=self.api_endpoint
             )
+            self.tts_api_version = '2024-02-15-preview'
+            self.tts_model = 'TTS_1'
             self.GPT_MODEL = "gpt_35_16k"
             self.whisper_model = "whisper_001"
+            self.voice_name = 'alloy'
+            self.tts_model = 'tts_1'
             
     def is_TunSurf_related (self, prompt):
         messages = [
@@ -58,8 +62,43 @@ class FileProcessor:
         response = self.client.chat.completions.create(model= self.GPT_MODEL ,messages=messages)
         #print(response)
         return response.choices[0].message.content
+    
+    def text_to_speech(self, text, output_file='output.mp3'):
+      if self.api_name == 'azureopenai':
+        url = f"{self.api_endpoint}/openai/deployments/{self.tts_model}/audio/speech?api-version={self.tts_api_version}"
+        headers = {
+            "api-key": self.api_key,
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": self.tts_model,
+            "input": text,
+            "voice": self.voice_name
+        }
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 200:
+            with open(output_file, 'wb') as f:
+                f.write(response.content)
+            return output_file
+        else:
+            print(f"Failed to generate speech: {response.status_code} - {response.text}")
+            return None
+      else:
+        response1 = self.client.audio.speech.create(
+            model= self.tts_model,
+            voice= self.voice_name,
+            input= text
+            )
+        response = response1.stream_to_file("output_file.mp3")
+        if response.status_code == 200:
+            with open(output_file, 'wb') as f:
+                f.write(response.content)
+            return output_file
+        else:
+            print(f"Failed to generate speech: {response.status_code} - {response.text}")
+            return None
 
-    def chat_with_ai(self, messages: list, content: str, front_json: dict):
+    def chat_with_ai(self, messages: list, content: str, front_json: dict, file_exist):
         if not content:
             return ""
         
@@ -212,6 +251,10 @@ class FileProcessor:
         messages.append({"role": "user", "content": content})
         response = get_response(messages, functions, self.GPT_MODEL, "auto")
         res = get_result(messages, response)
+        if file_exist ==1:
+            if self.last_file_type == '.mp3':  # Check if the last file processed was MP3
+                self.text_to_speech(res, 'response.mp3')
+                return res, 'response.mp3'
         return res
 
     def image_process(self, file) -> str:
@@ -407,10 +450,14 @@ class FileProcessor:
 
     def get_user_input(self, file, prompt: Optional[str], messages: Optional[list], front_json: Optional[dict]) -> str:
         content = ""
+        file_exist = 0
         if file:
+            file_exist = 1
             file_content = self.get_content(file)
             if file_content:
                 content += file_content + "\n"
         if prompt:
             content += prompt + "\n"
-        return self.chat_with_ai(messages=messages,content=content.strip(), front_json=front_json)
+        else:
+            content += 'what is the main idea?' + '\n'
+        return self.chat_with_ai(messages=messages,content=content.strip(), front_json=front_json, file_exist=file_exist)
