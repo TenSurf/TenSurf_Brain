@@ -380,7 +380,7 @@ class FileProcessor:
             elif file_extension.lower() in ['.pptx', '.ppt']:
                 return self.powerpoint_process(file)
 
-            elif file_extension.lower() == '.mp3':
+            elif file_extension.lower() in ['.mp3', '.wav']:
                 return self.speech_process(file)
 
             elif file_extension.lower() == '.csv':
