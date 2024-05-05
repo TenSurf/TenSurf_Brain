@@ -256,6 +256,16 @@ class FileProcessor:
                 self.text_to_speech(res, 'response.mp3')
                 return res, 'response.mp3'
         return res
+    
+        messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
+        messages.append({"role": "user", "content": content})
+        response = get_response(messages, functions, self.GPT_MODEL, "auto")
+        res = get_result(messages, response)
+        if file_exist ==1:
+            if self.last_file_type == '.mp3':  # Check if the last file processed was MP3
+                self.text_to_speech(res, 'response.mp3')
+                return res, 'response.mp3'
+        return res
 
     def image_process(self, file) -> str:
         try:
@@ -407,6 +417,8 @@ class FileProcessor:
     def process_file(self, file) -> str:
         try:
             _, file_extension = os.path.splitext(file.name)
+            
+            self.last_file_type = file_extension.lower()  # Track the type of the last processed file
 
             if file_extension.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff']:
                 return self.image_process(file)
