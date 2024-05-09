@@ -63,7 +63,7 @@ class FileProcessor:
         #print(response)
         return response.choices[0].message.content
     
-    def text_to_speech(self, text, output_file='output.mp3'):
+    def text_to_speech(self, text):
       if self.api_name == 'azureopenai':
         url = f"{self.api_endpoint}/openai/deployments/{self.tts_model}/audio/speech?api-version={self.tts_api_version}"
         headers = {
@@ -77,9 +77,7 @@ class FileProcessor:
         }
         response = requests.post(url, headers=headers, json=data)
         if response.status_code == 200:
-            with open(output_file, 'wb') as f:
-                f.write(response.content)
-            return output_file
+            return response.content
         else:
             print(f"Failed to generate speech: {response.status_code} - {response.text}")
             return None
@@ -255,9 +253,9 @@ class FileProcessor:
             print('file_exist')
             if self.last_file_type == '.mp3':  # Check if the last file processed was MP3
                 print('mp3')
-                self.text_to_speech(res, 'response.mp3')
+                output_speech = self.text_to_speech(res)
                 print(res)
-                return res, 'response.mp3'
+                return res, output_speech
         return res
 
     def image_process(self, file) -> str:
