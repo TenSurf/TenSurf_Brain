@@ -89,9 +89,7 @@ class FileProcessor:
             )
         response = response1.stream_to_file("output_file.mp3")
         if response.status_code == 200:
-            with open(output_file, 'wb') as f:
-                f.write(response.content)
-            return output_file
+            return response.content
         else:
             print(f"Failed to generate speech: {response.status_code} - {response.text}")
             return None
