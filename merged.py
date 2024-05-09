@@ -249,10 +249,8 @@ class FileProcessor:
         res = get_result(messages, response)
         if file_exist ==1:
             print('file_exist')
-            if self.last_file_type == '.mp3':  # Check if the last file processed was MP3
-                print('mp3')
+            if self.last_file_type in ['.mp3', '.wav']:  # Check if the last file processed was MP3
                 output_speech = self.text_to_speech(res)
-                print(res)
                 return res, output_speech
         return res
 
