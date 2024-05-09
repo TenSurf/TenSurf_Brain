@@ -39,6 +39,7 @@ class FileProcessor:
             self.GPT_MODEL = "gpt-3.5-turbo-1106"
             self.whisper_model = "whisper-1"
         else:  # Default to 'azureopenai'
+            self.api_name = 'azureopenai'
             self.api_endpoint = 'https://tensurfbrain1.openai.azure.com/'
             self.api_version = '2023-10-01-preview'
             self.api_key = '80ddd1ad72504f2fa226755d49491a61'
