@@ -1,25 +1,24 @@
-import gradio as gr
-from merged import *
-from utils import messages
-from config import *
+from typing import Optional
+import function_calling
+import file_processor
 
 
-input_audio = gr.Audio(sources="microphone", show_download_button=True, type="filepath")
-
-
-def random_response(message, history, audio):
-    text_message = message["text"]
-    file_message = message["files"]
-    llm = FileProcessor()
-    result = llm.get_user_input(file_path=None, prompt=text_message, messages=messages)
-    return result
-
-
-demo = gr.ChatInterface(
-    fn=random_response, title="Function Calling", multimodal=True,
-    additional_inputs=input_audio,
-)
-
-
-if __name__ == "__main__":
-    demo.launch(debug=True, server_port=8081, share_server_protocol="http", root_path="/api/v1")
+def main(input_json: dict) -> str:
+    file_path = input_json["file_path"]
+    prompt = input_json["prompt"]
+    messages = input_json["messages"]
+    front_json = input_json["front_json"]
+    content = ""
+    file_exist = 0
+    functionCalling = function_calling.FunctionCalling()
+    fileProcessor = file_processor.FileProcessor()
+    if file_path:
+        file_exist = 1
+        file_content = fileProcessor.get_content(file_path)
+        if file_content:
+            content += file_content + "\n"
+    if prompt:
+        content += prompt + "\n"
+    else:
+        content += fileProcessor.default_prompt + '\n'
+    return functionCalling.generate_answer(messages=messages,content=content.strip(), front_json=front_json, file_exist=file_exist)

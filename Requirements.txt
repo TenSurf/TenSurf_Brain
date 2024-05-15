@@ -7,3 +7,4 @@ scikit-learn
 openai
 PyPDF2
 importnb
+plotly
