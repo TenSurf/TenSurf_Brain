@@ -5,7 +5,7 @@ COPY . GradioApp
 WORKDIR GradioApp
 
 RUN pip install pip -U
-RUN pip install -r Requirements.txt
+RUN pip install -r requirements.txt
 
 EXPOSE 8081
 
