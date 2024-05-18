@@ -6,22 +6,24 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 import function_calling.input_filter as input_filter
-from file_processor.file_processor import FileProcessor
 from function_calling.functions_json import functions
 from importnb import imports
+import os
 
-with imports("ipynb"):
+if os.getenv("DEBUG"):
+    with imports("ipynb"):
+        import function_calling.functions_python as functions_python
+else:
     import function_calling.functions_python as functions_python
-import config
+
 import function_calling.utils as utils
 
 
 class FunctionCalling:
 
-    def __init__(self):
-        self.fileProcessor = FileProcessor()
-        self.client = self.fileProcessor.client
-        self.results_json = {}
+    def __init__(self, client):
+        self.client = client
+        self.results_json = None
 
     def generate_llm_response(
         self, messages, functions, model, function_call, temperature=0.2
@@ -35,7 +37,7 @@ class FunctionCalling:
         )
         return response
 
-    def get_results(self, llm_input: dict, chat_response: ChatCompletion):
+    def get_results(self, llm_input, chat_response):
         assistant_message = chat_response.choices[0].message
         llm_input.get("history_message").append(assistant_message)
         # when function calling doesn't happen
@@ -52,15 +54,15 @@ class FunctionCalling:
             function_arguments = json.loads(
                 chat_response.choices[0].message.function_call.arguments
             )
-            front_json = (
-                input_filter.front_end_json_sample if front_json is None else front_json
+            llm_input = (
+                input_filter.front_end_json_sample if llm_input is None else llm_input
             )
             FC = functions_python.FunctionCalls()
             print(f"\n{chat_response.choices[0].message}\n")
 
             # Filtering Inputs
             function_arguments = input_filter.input_filter(
-                function_name, function_arguments, front_json
+                function_name, function_arguments, llm_input
             )
 
             if function_name == "detect_trend":
@@ -75,7 +77,7 @@ class FunctionCalling:
                         }
                     )
                     chat_response = self.generate_llm_response(
-                        messages, functions, config.azure_GPT_MODEL_3, "auto"
+                        messages, functions, os.getenv("azure_GPT_MODEL_3"), "auto"
                     )
                     assistant_message = chat_response.choices[0].message
                     messages.append(assistant_message)
@@ -89,7 +91,7 @@ class FunctionCalling:
                 sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = (
                     FC.calculate_sr(parameters=function_arguments)
                 )
-                timezone_number = int(front_json["timezone"])
+                timezone_number = int(llm_input["timezone"])
                 for date in sr_start_date:
                     date -= timedelta(minutes=timezone_number)
                 for date in sr_end_date:
@@ -103,7 +105,7 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    messages, functions, config.azure_GPT_MODEL_3, "auto"
+                    messages, functions, os.getenv("azure_GPT_MODEL_3"), "auto"
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -126,7 +128,7 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    messages, functions, config.azure_GPT_MODEL_3, "auto"
+                    messages, functions, os.getenv("azure_GPT_MODEL_3"), "auto"
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -143,7 +145,7 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    messages, functions, config.azure_GPT_MODEL_3, "auto"
+                    messages, functions, os.getenv("azure_GPT_MODEL_3"), "auto"
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -160,7 +162,7 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    messages, functions, config.azure_GPT_MODEL_3, "auto"
+                    messages, functions, os.getenv("azure_GPT_MODEL_3"), "auto"
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -233,19 +235,7 @@ class FunctionCalling:
 
         return results
 
-    def check_relevance(self, prompt: str):
-        relevance_check = self.fileProcessor.is_TunSurf_related(prompt)
-        if "irrelevant" in relevance_check.lower():
-            return True
-        return False
-
-    def generate_answer(self, llm_input: dict):
-        if not llm_input.get("new_message"):
-            return ""
-
-        if self.check_relevance(llm_input.get("new_message")):
-            return "I'm here to help with trading and financial market queries. If you think your ask relates to trading and isn't addressed, please report a bug using the bottom right panel."
-
+    def generate_answer(self, llm_input: dict, content: str):
         # getting some complement explanation to LLM
         llm_input.get("history_message", []).append(
             {"role": "system", "content": utils.complement_message}
@@ -254,23 +244,19 @@ class FunctionCalling:
         llm_input.get("history_message").append(
             {"role": "user", "content": llm_input["new_message"]}
         )
-        
+
         # getting the result of the prompt
+        print(llm_input.get("history_message"))
         response = self.generate_llm_response(
             llm_input.get("history_message"),
             functions,
-            config.azure_GPT_MODEL_3,
+            os.getenv("azure_GPT_MODEL_3"),
             "auto",
             0.2,
         )
+        print(2)
         res = self.get_results(
-            llm_input.get("history_message"),
+            llm_input,
             response,
         )
-        if llm_input["file"]:
-            if (
-                self.fileProcessor.file_type == ".mp3"
-            ):  # Check if the last file processed was MP3
-                self.fileProcessor.text_to_speech(res, "response.mp3")
-                return res, self.results_json, "response.mp3"
         return res, self.results_json

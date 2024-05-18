@@ -1,58 +1,101 @@
-import function_calling.function_calling as function_calling
-import file_processor.file_processor as file_processor
-import config
+from function_calling import FunctionCalling
+from file_processor import FileProcessor
 from openai import OpenAI, AzureOpenAI
+import os
 
-# llm_input_json_keys = ["symbol", "start_datetime", "end_datetime", "timeframe", "timezone", "user_id", "history_message", "new_message", "file"]
+from dotenv import load_dotenv
 
-# llm_output_json_keys = ["response", "chart_info", "file_path", "function_call"]
+load_dotenv()
 
 class AzureConnectorSurf:
     def __init__(self) -> None:
-        self.api_endpoint = config.azure_api_endpoint
-        self.api_version = config.azure_api_version
-        self.api_key = config.azure_api_key
+        self.api_endpoint = os.getenv("azure_api_endpoint")
+        self.api_version = os.getenv("azure_api_version")
+        self.api_key = os.getenv("azure_api_key")
         self.client = AzureOpenAI(
             api_key=self.api_key,
             api_version=self.api_version,
             azure_endpoint=self.api_endpoint,
         )
-        self.tts_api_version = config.tts_api_version
-        self.tts_model1 = config.tts_model1
-        self.GPT_MODEL = config.azure_GPT_MODEL_3
-        self.whisper_model = config.azure_whisper_model
-        self.voice_name = config.voice_name
-        self.tts_model = config.tts_model2
+        self.tts_api_version = os.getenv("tts_api_version")
+        self.tts_model1 = os.getenv("tts_model1")
+        self.GPT_MODEL = os.getenv("azure_GPT_MODEL_3")
+        self.whisper_model = os.getenv("azure_whisper_model")
+        self.voice_name = os.getenv("voice_name")
+        self.tts_model = os.getenv("tts_model2")
+
 
 class OpenaiConnectorSurf:
     def __init__(self) -> None:
-        self.client = OpenAI(api_key=config.openai_api_key)
-        self.GPT_MODEL = config.openai_GPT_MODEL_3
-        self.whisper_model = config.whisper_model_openai
+        self.client = OpenAI(api_key=os.getenv("openai_api_key"))
+        self.GPT_MODEL = os.getenv("openai_GPT_MODEL_3")
+        self.whisper_model = os.getenv("whisper_model_openai")
 
-def llm_surf(llm_input_json_keys: dict) -> str:
-    symbol = llm_input_json_keys["symbol"]
-    start_datetime = llm_input_json_keys["start_datetime"]
-    end_datetime = llm_input_json_keys["end_datetime"]
-    timeframe = llm_input_json_keys["timeframe"]
-    timezone = llm_input_json_keys["timezone"]
-    user_id = llm_input_json_keys["user_id"]
-    history_message = llm_input_json_keys["history_message"]
-    new_message = llm_input_json_keys["new_message"]
-    file = llm_input_json_keys["file"]  # as type string or file binary
+
+def check_relevance(connector_surf, prompt: str):
+    messages = [
+        {
+            "role": "system",
+            "content": "Classify if the following prompt is relevant or irrelevant. Guidelines for you as a Trading Assistant:Relevance: Focus exclusively on queries related to trading and financial markets(including stock tickers). If a question falls outside this scope, politely inform the user that the question is beyond the service's focus.Accuracy: Ensure that the information provided is accurate and up-to-date. Use reliable financial data and current market analysis to inform your responses.Clarity: Deliver answers in a clear, concise, and understandable manner. Avoid jargon unless the user demonstrates familiarity with financial terms.Promptness: Aim to provide responses quickly to facilitate timely decision-making for users.Confidentiality: Do not ask for or handle personal investment details or sensitive financial information.Compliance: Adhere to legal and ethical standards applicable to financial advice and information dissemination.Again, focus solely on topics related to trading and financial markets. Politely notify the user if a question is outside this specific area of expertise.",
+        },
+        {"role": "user", "content": prompt},
+    ]
+    response = connector_surf.client.chat.completions.create(
+        model=connector_surf.GPT_MODEL, temperature=0.2, messages=messages
+    )
+    relevance_check = response.choices[0].message.content
+    if "irrelevant" in relevance_check.lower():
+        return True
+    return False
+
+
+def llm_surf(llm_input: dict) -> str:
+    # llm_input = {
+    #     "symbol": "NQ",
+    #     "start_datetime": "",
+    #     "end_datetime": "",
+    #     "timeframe": "1m",
+    #     "timezone": -210,
+    #     "user_id": 1,
+    #     "history_message": [],
+    #     "new_message": "",
+    #     "file": None,
+    # }
+
+    llm_output = {
+        "response": "",
+        "symbol": llm_input.get("symbol"),
+        "file": None,
+        "function_call": None,
+        "levels": None,
+    }
 
     azure_connector_surf = AzureConnectorSurf()
+
+    if llm_input.get("new_message") and check_relevance(
+        azure_connector_surf, llm_input.get("new_message")
+    ):
+        llm_output["response"] = (
+            "I'm here to help with trading and financial market queries. If you think your ask relates to trading and isn't addressed, please report a bug using the bottom right panel."
+        )
+        return llm_output
+
     content = ""
-    if llm_input_json_keys["file"]:
-        fileProcessor = file_processor.FileProcessor(azure_connector_surf)
-        file_content = fileProcessor.get_file_content(file)
+    if llm_input["file"]:
+        if type(llm_input["file"]) == str:
+            llm_input["file"] = open(llm_input["file"], "r")
+        fileProcessor = FileProcessor(azure_connector_surf)
+        file_content = fileProcessor.get_file_content(llm_input["file"])
         if file_content:
             content += file_content + "\n"
 
-    if new_message:
-        content += new_message + "\n"
+    if llm_input.get("new_message"):
+        content += llm_input.get("new_message") + "\n"
     else:
         content += fileProcessor.default_prompt + "\n"
 
-    functionCalling = function_calling.FunctionCalling()
-    return functionCalling.generate_answer(llm_input=llm_input_json_keys)
+    functionCalling = FunctionCalling(azure_connector_surf.client)
+    functionCalling.generate_answer(llm_input=llm_input, content=content)
+
+    llm_output["file"] = fileProcessor.text_to_speech(res)
+    return llm_output

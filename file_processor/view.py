@@ -14,19 +14,6 @@ class FileProcessor:
         self.default_prompt = "What is the main idea of this file?"
         self.file_type = None
         self.connector_surf = connector_surf
-        
-    def is_TunSurf_related(self, prompt):
-        messages = [
-            {
-                "role": "system",
-                "content": "Classify if the following prompt is relevant or irrelevant. Guidelines for you as a Trading Assistant:Relevance: Focus exclusively on queries related to trading and financial markets(including stock tickers). If a question falls outside this scope, politely inform the user that the question is beyond the service's focus.Accuracy: Ensure that the information provided is accurate and up-to-date. Use reliable financial data and current market analysis to inform your responses.Clarity: Deliver answers in a clear, concise, and understandable manner. Avoid jargon unless the user demonstrates familiarity with financial terms.Promptness: Aim to provide responses quickly to facilitate timely decision-making for users.Confidentiality: Do not ask for or handle personal investment details or sensitive financial information.Compliance: Adhere to legal and ethical standards applicable to financial advice and information dissemination.Again, focus solely on topics related to trading and financial markets. Politely notify the user if a question is outside this specific area of expertise.",
-            },
-            {"role": "user", "content": prompt},
-        ]
-        response = self.connector_surf.client.chat.completions.create(
-            model=self.connector_surf.GPT_MODEL, temperature=0.2, messages=messages
-        )
-        return response.choices[0].message.content
 
     def text_to_speech(self, text):
         url = f"{self.connector_surf.api_endpoint}/openai/deployments/{self.connector_surf.tts_model}/audio/speech?api-version={self.connector_surf.tts_api_version}"
