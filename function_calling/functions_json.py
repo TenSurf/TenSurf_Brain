@@ -46,14 +46,13 @@ Returns a number between -3 and 3 that represents the trend’s intensity and di
     ######### Calculate Support and Resistance Levels #########
     {
         "name": "calculate_sr",
-        "description": # "Identifying and scoring support and resistance levels in financial markets based on historical price data. \
-"Support and resistance levels are key concepts in technical analysis, representing price points on a chart where the odds favor a pause or reversal of a prevailing trend. \
+        "description": "Support and resistance levels represent price points on a chart where the odds favor a pause or reversal of a prevailing trend. \
 This function analyzes candlestick charts over a specified timeframe and lookback period to calculate these levels and their respective strengths. \
 Returns a dictionary containing four lists, each corresponding to a specific aspect of the calculated support and resistance levels: \
 1. levels_prices (list of floats): The prices at which support and resistance levels have been identified. \
-2. levels_start_timestamps (list of timestamps): The starting timestamps for each identified level, indicating when the level first became relevant. \
-3. levels_detect_timestamps (list of timestamps): The timestamps in which the levels have been recognized.\
-4. levels_end_timestamps (list of timestamps): The ending timestamps for each level, marking when the level was last relevant. \
+2. levels_start_timestamps (list of timestamps) \
+3. levels_detect_timestamps (list of timestamps) \
+4. levels_end_timestamps (list of timestamps) \
 5. levels_scores (list of floats): Scores associated with each level, indicating the strength or significance of the level. Higher scores typically imply stronger levels.",
         "parameters": {
             "type": "object",
