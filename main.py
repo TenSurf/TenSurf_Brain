@@ -67,7 +67,7 @@ def llm_surf(llm_input: dict) -> str:
         "symbol": llm_input.get("symbol"),
         "file": None,
         "function_call": None,
-        "levels": None,
+        "chart_info": None,
     }
 
     azure_connector_surf = AzureConnectorSurf()
@@ -95,7 +95,11 @@ def llm_surf(llm_input: dict) -> str:
         content += fileProcessor.default_prompt + "\n"
 
     functionCalling = FunctionCalling(azure_connector_surf.client)
-    functionCalling.generate_answer(llm_input=llm_input, content=content)
+    res, result_json = functionCalling.generate_answer(llm_input=llm_input, content=content)
+    
+    llm_output["response"] = res
+    llm_output["chart_info"] = result_json
 
     llm_output["file"] = fileProcessor.text_to_speech(res)
+    
     return llm_output
