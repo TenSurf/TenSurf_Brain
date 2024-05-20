@@ -10,11 +10,11 @@ from function_calling.functions_json import functions
 from importnb import imports
 import os
 
-if os.getenv("DEBUG"):
-    with imports("ipynb"):
-        import function_calling.functions_python as functions_python
-else:
-    import function_calling.functions_python as functions_python
+# if os.getenv("DEBUG"):
+# with imports("ipynb"):
+#     import function_calling.functions_python as functions_python
+# else:
+import function_calling.functions_python as functions_python
 
 import function_calling.utils as utils
 
@@ -23,7 +23,7 @@ class FunctionCalling:
 
     def __init__(self, client):
         self.client = client
-        self.results_json = None
+        self.results_json = {}
 
     def generate_llm_response(
         self, messages, functions, model, function_call, temperature=0.2
@@ -40,6 +40,7 @@ class FunctionCalling:
     def get_results(self, llm_input, chat_response):
         assistant_message = chat_response.choices[0].message
         llm_input.get("history_message").append(assistant_message)
+        messages = llm_input["history_message"]
         # when function calling doesn't happen
         if chat_response.choices[0].message.function_call == None:
             results = f"{chat_response.choices[0].message.content}"
@@ -58,6 +59,7 @@ class FunctionCalling:
                 input_filter.front_end_json_sample if llm_input is None else llm_input
             )
             FC = functions_python.FunctionCalls()
+            
             print(f"\n{chat_response.choices[0].message}\n")
 
             # Filtering Inputs
@@ -88,9 +90,7 @@ class FunctionCalling:
                     )
 
             elif function_name == "calculate_sr":
-                sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = (
-                    FC.calculate_sr(parameters=function_arguments)
-                )
+                sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
                 timezone_number = int(llm_input["timezone"])
                 for date in sr_start_date:
                     date -= timedelta(minutes=timezone_number)
@@ -247,6 +247,7 @@ class FunctionCalling:
 
         # getting the result of the prompt
         print(llm_input.get("history_message"))
+
         response = self.generate_llm_response(
             llm_input.get("history_message"),
             functions,
@@ -254,7 +255,6 @@ class FunctionCalling:
             "auto",
             0.2,
         )
-        print(2)
         res = self.get_results(
             llm_input,
             response,

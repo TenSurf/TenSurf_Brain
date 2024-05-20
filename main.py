@@ -50,24 +50,26 @@ def check_relevance(connector_surf, prompt: str):
 
 
 def llm_surf(llm_input: dict) -> str:
-    # llm_input = {
-    #     "symbol": "NQ",
-    #     "start_datetime": "",
-    #     "end_datetime": "",
-    #     "timeframe": "1m",
-    #     "timezone": -210,
-    #     "user_id": 1,
-    #     "history_message": [],
-    #     "new_message": "",
-    #     "file": None,
-    # }
+    """
+    llm_input = {
+        "symbol": "NQ",
+        "start_datetime": "",
+        "end_datetime": "",
+        "timeframe": "1m",
+        "timezone": -210,
+        "user_id": 1,
+        "history_message": [],
+        "new_message": "",
+        "file": None,
+    }
+    """
 
     llm_output = {
         "response": "",
         "symbol": llm_input.get("symbol"),
         "file": None,
         "function_call": None,
-        "chart_info": None,
+        "levels": None,
     }
 
     azure_connector_surf = AzureConnectorSurf()
@@ -95,11 +97,8 @@ def llm_surf(llm_input: dict) -> str:
         content += fileProcessor.default_prompt + "\n"
 
     functionCalling = FunctionCalling(azure_connector_surf.client)
-    res, result_json = functionCalling.generate_answer(llm_input=llm_input, content=content)
-    
-    llm_output["response"] = res
-    llm_output["chart_info"] = result_json
+    functionCalling.generate_answer(llm_input=llm_input, content=content)
 
-    llm_output["file"] = fileProcessor.text_to_speech(res)
-    
+    # llm_output["file"] = fileProcessor.text_to_speech(res)
+
     return llm_output
