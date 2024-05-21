@@ -1,4 +1,4 @@
-from function_calling import FunctionCalling
+from single_agent import FunctionCalling
 from file_processor import FileProcessor
 from openai import OpenAI, AzureOpenAI
 import os
@@ -50,26 +50,12 @@ def check_relevance(connector_surf, prompt: str):
 
 
 def llm_surf(llm_input: dict) -> str:
-    """
-    llm_input = {
-        "symbol": "NQ",
-        "start_datetime": "",
-        "end_datetime": "",
-        "timeframe": "1m",
-        "timezone": -210,
-        "user_id": 1,
-        "history_message": [],
-        "new_message": "",
-        "file": None,
-    }
-    """
 
     llm_output = {
         "response": "",
         "symbol": llm_input.get("symbol"),
         "file": None,
         "function_call": None,
-        "levels": None,
     }
 
     azure_connector_surf = AzureConnectorSurf()
@@ -97,8 +83,10 @@ def llm_surf(llm_input: dict) -> str:
         content += fileProcessor.default_prompt + "\n"
 
     functionCalling = FunctionCalling(azure_connector_surf.client)
-    functionCalling.generate_answer(llm_input=llm_input, content=content)
+    results_string, results_json, function_name = functionCalling.generate_answer(llm_input=llm_input, content=content)
 
-    # llm_output["file"] = fileProcessor.text_to_speech(res)
+    llm_output["response"] = results_string
+    llm_output["chart_info"] = results_json
+    llm_output["function_call"] = function_name
 
     return llm_output
