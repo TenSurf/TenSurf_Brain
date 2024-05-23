@@ -42,11 +42,13 @@ class FunctionCalling:
         llm_input.get("history_message").append(assistant_message)
         # messages = llm_input["history_message"]
         # when function calling doesn't happen
+        
+        function_name = None
+        results = ""
         if chat_response.choices[0].message.function_call == None:
             results = f"{chat_response.choices[0].message.content}"
         # when function calling happens
         else:
-            results = ""
             # if the chat response was not none
             if assistant_message.content != None:
                 results += assistant_message.content + "\n"
@@ -59,7 +61,7 @@ class FunctionCalling:
                 input_filter.front_end_json_sample if llm_input is None else llm_input
             )
             FC = functions_python.FunctionCalls()
-            
+
             print(f"\n{chat_response.choices[0].message}\n")
 
             # Filtering Inputs
@@ -79,7 +81,10 @@ class FunctionCalling:
                         }
                     )
                     chat_response = self.generate_llm_response(
-                        llm_input["history_message"], functions, os.getenv("azure_GPT_MODEL_3"), "auto"
+                        llm_input["history_message"],
+                        functions,
+                        os.getenv("azure_GPT_MODEL_3"),
+                        "auto",
                     )
                     assistant_message = chat_response.choices[0].message
                     llm_input["history_message"].append(assistant_message)
@@ -90,7 +95,9 @@ class FunctionCalling:
                     )
 
             elif function_name == "calculate_sr":
-                sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = FC.calculate_sr(parameters=function_arguments)
+                sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = (
+                    FC.calculate_sr(parameters=function_arguments)
+                )
                 timezone_number = int(llm_input["timezone"])
                 for date in sr_start_date:
                     date -= timedelta(minutes=timezone_number)
@@ -105,7 +112,10 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    llm_input["history_message"], functions, os.getenv("azure_GPT_MODEL_3"), "auto"
+                    llm_input["history_message"],
+                    functions,
+                    os.getenv("azure_GPT_MODEL_3"),
+                    "auto",
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -128,7 +138,10 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    llm_input["history_message"], functions, os.getenv("azure_GPT_MODEL_3"), "auto"
+                    llm_input["history_message"],
+                    functions,
+                    os.getenv("azure_GPT_MODEL_3"),
+                    "auto",
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -145,7 +158,10 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    llm_input["history_message"], functions, os.getenv("azure_GPT_MODEL_3"), "auto"
+                    llm_input["history_message"],
+                    functions,
+                    os.getenv("azure_GPT_MODEL_3"),
+                    "auto",
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -162,7 +178,10 @@ class FunctionCalling:
                     }
                 )
                 chat_response = self.generate_llm_response(
-                    llm_input["history_message"], functions, os.getenv("azure_GPT_MODEL_3"), "auto"
+                    llm_input["history_message"],
+                    functions,
+                    os.getenv("azure_GPT_MODEL_3"),
+                    "auto",
                 )
                 results += (
                     chat_response.choices[0].message.content
@@ -174,61 +193,108 @@ class FunctionCalling:
                 results += utils.introduction
 
             elif function_name == "visualize_data":
-                def get_and_visualize_polygon_data(ticker: str, start_datetime_str: str = None, end_datetime_str: str = None, timeframe: str = 'day', api_key: str = None, data_type: str = "realtime") -> dict:
+
+                def get_and_visualize_polygon_data(
+                    ticker: str,
+                    start_datetime_str: str = None,
+                    end_datetime_str: str = None,
+                    timeframe: str = "day",
+                    api_key: str = None,
+                    data_type: str = "realtime",
+                ) -> dict:
                     if data_type == "realtime":
                         current_time = datetime.now()
-                        end_datetime =  current_time.strftime("%Y-%m-%dT%H:%M:%S")
+                        end_datetime = current_time.strftime("%Y-%m-%dT%H:%M:%S")
                         three_days_ago = current_time - timedelta(days=3)
                         start_datetime = three_days_ago.strftime("%Y-%m-%dT%H:%M:%S")
                         start_datetime_str = start_datetime
                         end_datetime_str = end_datetime
-                        start_datetime = datetime.strptime(start_datetime_str, "%Y-%m-%dT%H:%M:%S")
-                        end_datetime = datetime.strptime(end_datetime_str, "%Y-%m-%dT%H:%M:%S")
+                        start_datetime = datetime.strptime(
+                            start_datetime_str, "%Y-%m-%dT%H:%M:%S"
+                        )
+                        end_datetime = datetime.strptime(
+                            end_datetime_str, "%Y-%m-%dT%H:%M:%S"
+                        )
                         start_timestamp_ms = int(start_datetime.timestamp()) * 1000
                         end_timestamp_ms = int(end_datetime.timestamp()) * 1000
                         url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/{timeframe}/{start_timestamp_ms}/{end_timestamp_ms}?apiKey={api_key}"
                     elif data_type == "historical":
-                        start_datetime = datetime.strptime(start_datetime_str, "%Y-%m-%dT%H:%M:%S")
-                        end_datetime = datetime.strptime(end_datetime_str, "%Y-%m-%dT%H:%M:%S")
+                        start_datetime = datetime.strptime(
+                            start_datetime_str, "%Y-%m-%dT%H:%M:%S"
+                        )
+                        end_datetime = datetime.strptime(
+                            end_datetime_str, "%Y-%m-%dT%H:%M:%S"
+                        )
                         start_timestamp_ms = int(start_datetime.timestamp()) * 1000
                         end_timestamp_ms = int(end_datetime.timestamp()) * 1000
                         url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/{timeframe}/{start_timestamp_ms}/{end_timestamp_ms}?apiKey={api_key}"
                     else:
-                        return {"error": "Invalid data type. Please specify either 'realtime' or 'historical'."}
+                        return {
+                            "error": "Invalid data type. Please specify either 'realtime' or 'historical'."
+                        }
                     response = requests.get(url)
                     function_response = response.json()
-                    prices = [{'time': datetime.fromtimestamp(result['t'] / 1000), 'open': result['o'], 'close': result['c'], 'high': result['h'], 'low': result['l'], 'volume': result['v']} for result in function_response['results']]
+                    prices = [
+                        {
+                            "time": datetime.fromtimestamp(result["t"] / 1000),
+                            "open": result["o"],
+                            "close": result["c"],
+                            "high": result["h"],
+                            "low": result["l"],
+                            "volume": result["v"],
+                        }
+                        for result in function_response["results"]
+                    ]
                     data = pd.DataFrame(prices)
-                    #print(data)
+                    # print(data)
                     data.to_csv("data.csv")
 
-                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02)
+                    fig = make_subplots(
+                        rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02
+                    )
 
-                    fig.add_trace(go.Candlestick(x=data['time'],
-                                    open=data['open'],
-                                    high=data['high'],
-                                    low=data['low'],
-                                    close=data['close'],
-                                    name='Candlestick Chart'), row=1, col=1)
+                    fig.add_trace(
+                        go.Candlestick(
+                            x=data["time"],
+                            open=data["open"],
+                            high=data["high"],
+                            low=data["low"],
+                            close=data["close"],
+                            name="Candlestick Chart",
+                        ),
+                        row=1,
+                        col=1,
+                    )
 
                     # Volume plot
-                    fig.add_trace(go.Bar(x=data['time'],
-                            y=data['volume'],
-                            name='Volume',
-                            marker_color='blue'), row=2, col=1)
+                    fig.add_trace(
+                        go.Bar(
+                            x=data["time"],
+                            y=data["volume"],
+                            name="Volume",
+                            marker_color="blue",
+                        ),
+                        row=2,
+                        col=1,
+                    )
 
-                    fig.update_layout(title='Candlestick Chart with Volume for ' + ticker,
-                        yaxis_title='Price',
+                    fig.update_layout(
+                        title="Candlestick Chart with Volume for " + ticker,
+                        yaxis_title="Price",
                         xaxis_rangeslider_visible=False,
-                        xaxis=dict(type='category'))
+                        xaxis=dict(type="category"),
+                    )
                     # save figure as an html file
                     fig.write_html("candlestick_chart.html")
 
-                    #fig.show()
+                    # fig.show()
                     return data
+
                 polygon_api_key = "6lpCMsrDOzmm6PPpSkci73RfUvEeU9y_"
                 ######
-                results = get_and_visualize_polygon_data(**function_arguments, api_key=polygon_api_key)
+                results = get_and_visualize_polygon_data(
+                    **function_arguments, api_key=polygon_api_key
+                )
 
             else:
                 results += f"{chat_response.choices[0].message.content}"
@@ -259,5 +325,5 @@ class FunctionCalling:
             llm_input,
             response,
         )
-        
+
         return res, self.results_json, function_name
