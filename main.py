@@ -69,7 +69,7 @@ def llm_surf(llm_input: dict) -> str:
         return llm_output
 
     content = ""
-    if llm_input["file"]:
+    if "file" in llm_input and llm_input["file"]:
         if type(llm_input["file"]) == str:
             llm_input["file"] = open(llm_input["file"], "r")
         fileProcessor = FileProcessor(azure_connector_surf)
@@ -82,11 +82,13 @@ def llm_surf(llm_input: dict) -> str:
     else:
         content += fileProcessor.default_prompt + "\n"
 
-    functionCalling = FunctionCalling(azure_connector_surf.client)
-    results_string, results_json, function_name = functionCalling.generate_answer(llm_input=llm_input, content=content)
-
-    llm_output["response"] = results_string
-    llm_output["chart_info"] = results_json
-    llm_output["function_call"] = function_name
+    if "multi-agent" in llm_input and llm_input["multi-agent"]:
+        pass
+    else:
+        functionCalling = FunctionCalling(azure_connector_surf.client)
+        results_string, results_json, function_name = functionCalling.generate_answer(llm_input=llm_input, content=content)
+        llm_output["response"] = results_string
+        llm_output["chart_info"] = results_json
+        llm_output["function_call"] = function_name
 
     return llm_output
