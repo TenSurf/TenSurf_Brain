@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class AzureConnectorSurf:
     def __init__(self) -> None:
         self.api_endpoint = os.getenv("azure_api_endpoint")
@@ -69,10 +70,10 @@ def llm_surf(llm_input: dict) -> str:
         return llm_output
 
     content = ""
+    fileProcessor = FileProcessor(azure_connector_surf)
     if llm_input["file"]:
         if type(llm_input["file"]) == str:
             llm_input["file"] = open(llm_input["file"], "r")
-        fileProcessor = FileProcessor(azure_connector_surf)
         file_content = fileProcessor.get_file_content(llm_input["file"])
         if file_content:
             content += file_content + "\n"
@@ -83,10 +84,14 @@ def llm_surf(llm_input: dict) -> str:
         content += fileProcessor.default_prompt + "\n"
 
     functionCalling = FunctionCalling(azure_connector_surf.client)
-    results_string, results_json, function_name = functionCalling.generate_answer(llm_input=llm_input, content=content)
+    results_string, results_json, function_name = functionCalling.generate_answer(
+        llm_input=llm_input, content=content
+    )
 
     llm_output["response"] = results_string
     llm_output["chart_info"] = results_json
     llm_output["function_call"] = function_name
+
+    llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
 
     return llm_output
