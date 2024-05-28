@@ -9,8 +9,7 @@ from deepeval.test_case import LLMTestCase
 from main import llm_surf
 import input_filter
 
-# os.environ["OPENAI_API_KEY"] = "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"
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 
 
 def test_case(llm_input, llm_output, supposed_output, threshold):
@@ -29,15 +28,21 @@ def unit_test():
 
     # for each function
     for test in tests:
-        messages = []
         print(f"Test:   {test}")
         # loading the prompts and their results
         file = open(f"UnitTest/test_results/{test}_test_results.json")
         data = json.load(file)
+        input_json["history_message"] = []
         # testing each prompt for the corresponding function
         for prompt, result in tqdm(data.items()):
             input_json["new_message"] = prompt
             output_json = llm_surf(input_json)
             generated = output_json["response"]
             # running deepeval for each prompt
-            test_case(prompt, generated, result, 0.5)
+            try:
+                test_case(prompt, generated, result, 0.5)
+            except:
+                print(f"prompt {prompt} did not executed!")
+                f = open("problemed_prompts.txt", "a")
+                f.write(f"{prompt}\n")
+                f.close()

@@ -7,26 +7,21 @@ import pandas as pd
 
 import input_filter as input_filter
 from single_agent.functions_json import functions
-# from importnb import imports
 import os
 
-# if os.getenv("DEBUG"):
-# with imports("ipynb"):
-#     import function_calling.functions_python as functions_python
-# else:
 import functions_python
 
 import single_agent.utils as utils
 
 
-class FunctionCalling:
+class Single_Agent:
 
     def __init__(self, client):
         self.client = client
         self.results_json = {}
 
     def generate_llm_response(
-        self, messages, functions, model, function_call, temperature=0.2
+        self, messages, functions, model, function_call, temperature=0
     ):
         response = self.client.chat.completions.create(
             model=model,

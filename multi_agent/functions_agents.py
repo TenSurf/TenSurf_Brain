@@ -4,9 +4,6 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from langgraph.prebuilt import ToolExecutor
 
 import functions_python
-from multi_agent.utils import ChatWithOpenai, client
-
-fc = functions_python.FunctionCalls()
 
 
 ######## Trend Detection ########
@@ -14,10 +11,10 @@ class PropertiesCalculateTrend(BaseModel):
 	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed.")
 
 	start_datetime: Optional[str] = Field(None, description="The start timestamp of period over which the analysis is done. \
-	The format of the date should be in the following format %b-%d-%y %H:%M:%S like this example: May-1-2024 13:27:49")
+The format of the date should be in the following format %b-%d-%y %H:%M:%S like this example: May-1-2024 13:27:49")
 	end_datetime: Optional[str] = Field(None, description="The end timestamp of period over which the analysis is done. \
-	The format of the date should be in the following format %b-%d-%y %H:%M:%S like this example: May-1-2024 13:27:49. \
-	The user can set this parameter to now. In this situation this parameter's value is the current date time.")
+The format of the date should be in the following format %b-%d-%y %H:%M:%S like this example: May-1-2024 13:27:49. \
+The user can set this parameter to now. In this situation this parameter's value is the current date time.")
 
 	lookback: Optional[str] = Field(None, description="The number of seconds, minutes, hours, days, weeks, months or years to look back for calculating the trend of the given symbol. \
 This parameter determines the depth of historical data to be considered in the analysis. The format of this value must obey one of the following examples: 30 seconds, 10 minutes, 2 hours, 5 days, 3 weeks, 2 months and 3 years. \
@@ -39,6 +36,7 @@ Returns a number between -3 and 3 that represents the trend’s intensity and di
 \n 1: mild bullish (upward) trend"""
 
 	args_schema: Type[BaseModel] = PropertiesCalculateTrend
+	return_direct: bool = True
 
 	def _run(
 			self, symbol: str = None, start_datetime: str = None, end_datetime: str = None, lookback: str = None
@@ -50,7 +48,10 @@ Returns a number between -3 and 3 that represents the trend’s intensity and di
 						"end_datetime": end_datetime,
 						"lookback": lookback
 						}
+		
+		fc = functions_python.FunctionCalls()
 
+		# if state
 		return fc.detect_trend(function_arguments)
 
 
@@ -58,7 +59,7 @@ Returns a number between -3 and 3 that represents the trend’s intensity and di
 class PropertiesCalculateSR(BaseModel):
 	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed.")
 	timeframe: Optional[str] = Field(None, description="Specifies the timeframe of the candlestick chart to be analyzed. \
-	This parameter defines the granularity of the data used for calculating the levels. The only allowed formats would like 3h, 20min, 1d.")
+This parameter defines the granularity of the data used for calculating the levels. The only allowed formats would like 3h, 20min, 1d.")
 	lookback_days: Optional[str] = Field(None, description="The number of days to look back for calculating the support and resistance levels. \
 This parameter determines the depth of historical data to be considered in the analysis. (e.g. 10 days)")
 
@@ -83,6 +84,8 @@ Returns a dictionary containing five lists, each corresponding to a specific asp
 						"timeframe": timeframe,
 						"lookback_days": lookback_days
 						}
+		
+		fc = functions_python.FunctionCalls()
 
 		return fc.calculate_sr(parameters)
 
@@ -129,6 +132,8 @@ It includes a list of stoplosses and the risk on them and finally the level or m
                       "neighborhood": neighborhood,
                       "atr_coef": atr_coef
                       }
+		
+		fc = functions_python.FunctionCalls()
 
 		return fc.calculate_sl(parameters)
 
@@ -158,6 +163,8 @@ Returns list of price for take-profit and information for each price For exampe:
 						"direction": direction,
 						"stoploss": stoploss
 						}
+		
+		fc = functions_python.FunctionCalls()
 
 		return fc.calculate_tp(parameters)
 
@@ -185,19 +192,20 @@ Returns a number between -3 and 3 that represents the trend’s intensity and di
 						"symbol": symbol,
 						"method": method
 						}
+		
+		fc = functions_python.FunctionCalls()
 
-		return fc.bias_detection(parameters)
+		return fc.get_bias(parameters)
 
 
-Trend = CalculateTrend()
-SR = CalculateSR()
-SL = CalculateSL()
-TP = CalculateTp()
-Bias = BiasDetection()
+class Handlers:
+	def __init__(self, client, ChatWithOpenai):
+		self.client = client
+		self.default_message = ["Check the following text for greeting words and do as the system message said."]
+		self.ChatWithOpenai = ChatWithOpenai
 
-default_message = ["Check the following text for greeting words and do as the system message said."]
-
-handler_zero_openai = ChatWithOpenai(system_message="You are an assistant. Your job is to check the user input Not answer it.\
+	def handler_zero(self):
+		handler_zero_openai = self.ChatWithOpenai(system_message="You are an assistant. Your job is to check the user input Not answer it.\
 If the user input contains greeting words like ‘hello’, ‘hi’, and so on, \
 then you should remove these words. \
 Note that the final response is either the input with the greeting word removed, \
@@ -215,13 +223,15 @@ Example 3 (when there is just one or more greeting words): \
 Note that you are not permitted to answer user requests directly. \
 Only perform the tasks instructed by system messages.",
 
-                                      default_user_messages=default_message,
-                                      model="gpt_35_16k",
-                                      temperature=0.2,
-                                      max_tokens=100,
-                                      client=client)
+											default_user_messages=self.default_message,
+											model="gpt_35_16k",
+											temperature=0,
+											max_tokens=100,
+											client=self.client)
+		return handler_zero_openai
 
-handler_one_openai = ChatWithOpenai(system_message="You are an assistant. Your job is to check the user input, not answer it. \
+	def handler_one(self):
+		handler_one_openai = self.ChatWithOpenai(system_message="You are an assistant. Your job is to check the user input, not answer it. \
 We are a system with the name 'Tensurf Brain' or 'Tensurf'. \
 If the user needs any information about us or needs a tutorial for \
 how our system is working, your job is to detect these scenarios and respond with 'True'. \
@@ -232,56 +242,78 @@ For any other input that doesn't classify in the tutorial or information \
 about 'Tensurf Brain' or 'Tensurf' you should return false. \
 Note that you are not permitted to answer user requests directly. \
 Only perform the tasks instructed by system messages.",
-                                    model="gpt_35_16k",
-                                    temperature=0.2,
-                                    max_tokens=100,
-                                    client=client)
+											model="gpt_35_16k",
+											temperature=0,
+											max_tokens=100,
+											client=self.client)
+		return handler_one_openai
 
-handler_two_openai = ChatWithOpenai(system_message="You are an assistant. Your job is to check the user input. \
+	def handler_two(self):
+		handler_two_openai = self.ChatWithOpenai(system_message="You are an assistant. Your job is to check the user input. \
 If the user input does not contain any financial and \
 trading topics or requests, then you should answer only\
 with ‘True’. Otherwise, return ‘False’. \
 Possible responses for you are 'True' or 'False'. \
 For example, the correct response to the question \
 'What is the trend?' is 'False'.",
-                              model="gpt_35_16k",
-                              temperature=0,
-                              max_tokens=100,
-                              client=client)
-
-######## Irrelevant Handler ########
-class HandleIrrelevantSchema(BaseModel):
-    massage: str = Field(..., description="The humanmassage")
-
-class HandleIrrelevant(BaseTool):
-    name = "HandleIrrelevant"
-    description = """This function checks if the message contains financial or trading subjects or not. \
-The output of this function is either True or False and the possible output of this function are 'True' or 'False'.: \
-True: when the message contains financial or trading subjects. \
-False: when the message request is not in these fields."""
-
-    args_schema: Type[BaseModel] = HandleIrrelevantSchema
-
-    def _run(
-        self, massage: str
-    ) -> dict:
-
-        user_input = [{"role": "user", "content": "'" + massage + "'"}]
-
-        modified_input = handler_zero_openai.chat(user_input)
-        if modified_input == 'None':
-          return 'Greeting'
-
-        modified_user_input = [{"role": "user", "content": modified_input}]
-
-        if handler_one_openai.chat(modified_user_input) == 'True':
-          return "Tutorial"
-        else:
-          return handler_two_openai.chat(modified_user_input)
+									model="gpt_35_16k",
+									temperature=0,
+									max_tokens=100,
+									client=self.client)
+		return handler_two_openai
 
 
-Handler = HandleIrrelevant()
+def create_irrelavant_handler(client, ChatWithOpenai):
+	######## Irrelevant Handler ########
+	class HandleIrrelevantSchema(BaseModel):
+		massage: str = Field(..., description="The humanmassage")
+
+	class HandleIrrelevant(BaseTool):
+		name = "HandleIrrelevant"
+		description = """This function checks if the message contains financial or trading subjects or not. \
+	The output of this function is either True or False and the possible output of this function are 'True' or 'False'.: \
+	True: when the message contains financial or trading subjects. \
+	False: when the message request is not in these fields."""
+
+		args_schema: Type[BaseModel] = HandleIrrelevantSchema
+
+		def _run(
+			self, massage: str
+		) -> dict:
+
+			handlers = Handlers(client=client, ChatWithOpenai=ChatWithOpenai)
+			user_input = [{"role": "user", "content": "'" + massage + "'"}]
+
+			handler_zero_openai = handlers.handler_zero()
+			handler_one_openai = handlers.handler_one()
+			handler_two_openai = handlers.handler_two()
+
+			modified_input = handler_zero_openai.chat(user_input)
+			if modified_input == 'None':
+				return 'Greeting'
+
+			modified_user_input = [{"role": "user", "content": modified_input}]
+
+			if handler_one_openai.chat(modified_user_input) == 'True':
+				return "Tutorial"
+			else:
+				return handler_two_openai.chat(modified_user_input)
+	
+	Handler = HandleIrrelevant()
+	return Handler
 
 
-tools = [Trend, SR, TP, SL, Bias, Handler]
-tool_executor = ToolExecutor(tools)
+def create_agent_tools(client, ChatWithOpenai):
+
+	Trend = CalculateTrend()
+	SR = CalculateSR()
+	SL = CalculateSL()
+	TP = CalculateTp()
+	Bias = BiasDetection()
+	Handler = create_irrelavant_handler(client, ChatWithOpenai)
+
+	tools = [Trend, SR, TP, SL, Bias, Handler]
+	tool_executor = ToolExecutor(tools)
+	trading_tools = [Trend, SR, SL, TP, Bias]
+	
+	return tool_executor, trading_tools

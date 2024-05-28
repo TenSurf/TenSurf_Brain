@@ -1,27 +1,17 @@
-import os
-import csv
 import pytz
 import re
 import pandas as pd
-import random
 import pandas as pd
 import numpy as np
 from scipy.signal import argrelextrema
 import bisect
-from collections import defaultdict
-from copy import deepcopy
 from datetime import datetime , timedelta
-import math
 from sklearn.cluster import AgglomerativeClustering
 from datetime import timedelta, datetime
-from time import sleep
-import time
 from sklearn.cluster import AgglomerativeClustering
 from scipy.signal import argrelextrema
 import numpy as np
-import influxdb_client
-from influxdb_client.client.write_api import SYNCHRONOUS, ASYNCHRONOUS
-from influxdb_client import InfluxDBClient, Point, WriteOptions, WritePrecision
+from influxdb_client import InfluxDBClient
 import requests
 
 
@@ -549,7 +539,7 @@ class SRDetector:
         grouped['maxprice'] = grouped2["price"]
         grouped = grouped.rename(columns={"price": 'minprice'})
         return grouped.to_dict('records')
-
+    
 
 def get_pivots(data_dict, data_index):
     zigzag = zigzagClass(mode='mode1', reversal=.02)
@@ -610,7 +600,8 @@ def make_new_pivots(first_pivot, interval, pivot_values, pivot_indices):
 
 
 def find_trend(data_dict, data_index, start_index, end_index):
-    data = {x: data_dict[x][start_index:end_index] for x in ['open', 'high', 'low', 'close', 'zigzag', 'zigzag_text']}
+    # data = {x: data_dict[x][start_index:end_index] for x in ['open', 'high', 'low', 'close', 'zigzag', 'zigzag_text']}
+    data = {x: data_dict[x][start_index:end_index] for x in ['open', 'high', 'low', 'close']}
     data['DateTime'] = data_index[start_index:end_index]
     data_len = len(data['close'])
     close_data = data['close']
@@ -1423,4 +1414,3 @@ class FunctionCalls:
             # microcomposite = MicroComposite(self.config)
         answer['combined_bias'] = 1 if np.sum(answer['bias']) > 0 else -1 if np.sum(answer['bias']) < 0 else 0
         return answer
-    
