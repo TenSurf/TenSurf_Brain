@@ -8,7 +8,7 @@ from single_agent import Single_Agent
 from multi_agent import Multi_Agent
 
 load_dotenv()
-
+DEBUG = (os.getenv('DEBUG', 'True') == 'True')
 
 class ChatWithOpenai:
     def __init__(
@@ -133,7 +133,7 @@ def llm_surf(llm_input: dict) -> str:
         llm_output["chart_info"] = results_json
         llm_output["function_call"] = function_name
 
-    if not os.environ("DEBUG"):
+    if not DEBUG:
         llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
 
     return llm_output
