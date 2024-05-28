@@ -9,3 +9,8 @@ PyPDF2
 importnb
 plotly
 python-dotenv
+langchain_groq
+langgraph
+langchain
+langchain-core
+groq

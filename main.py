@@ -1,11 +1,44 @@
-from single_agent import FunctionCalling
-from file_processor import FileProcessor
 from openai import OpenAI, AzureOpenAI
 import os
 
 from dotenv import load_dotenv
 
+from file_processor import FileProcessor
+from single_agent import Single_Agent
+from multi_agent import Multi_Agent
+
 load_dotenv()
+
+
+class ChatWithOpenai:
+    def __init__(
+        self,
+        system_message,
+        model,
+        temperature,
+        max_tokens,
+        client,
+        default_user_messages=None,
+    ):
+        self.system_message = system_message
+        self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        azure_connector_surf = AzureConnectorSurf()
+        self.client = azure_connector_surf.client
+        self.messages = [{"role": "system", "content": system_message}]
+        if default_user_messages:
+            for user_message in default_user_messages:
+                self.messages += [{"role": "user", "content": user_message}]
+
+    def chat(self, user_input):
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=self.messages + user_input,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
+        return response.choices[0].message.content
 
 
 class AzureConnectorSurf:
@@ -42,7 +75,7 @@ def check_relevance(connector_surf, prompt: str):
         {"role": "user", "content": prompt},
     ]
     response = connector_surf.client.chat.completions.create(
-        model=connector_surf.GPT_MODEL, temperature=0.2, messages=messages
+        model=connector_surf.GPT_MODEL, temperature=0, messages=messages
     )
     relevance_check = response.choices[0].message.content
     if "irrelevant" in relevance_check.lower():
@@ -50,6 +83,7 @@ def check_relevance(connector_surf, prompt: str):
     return False
 
 
+# class llm_surf:
 def llm_surf(llm_input: dict) -> str:
 
     llm_output = {
@@ -61,17 +95,9 @@ def llm_surf(llm_input: dict) -> str:
 
     azure_connector_surf = AzureConnectorSurf()
 
-    if llm_input.get("new_message") and check_relevance(
-        azure_connector_surf, llm_input.get("new_message")
-    ):
-        llm_output["response"] = (
-            "I'm here to help with trading and financial market queries. If you think your ask relates to trading and isn't addressed, please report a bug using the bottom right panel."
-        )
-        return llm_output
-
     content = ""
     fileProcessor = FileProcessor(azure_connector_surf)
-    if llm_input["file"]:
+    if "file" in llm_input and llm_input["file"]:
         if type(llm_input["file"]) == str:
             llm_input["file"] = open(llm_input["file"], "r")
         file_content = fileProcessor.get_file_content(llm_input["file"])
@@ -83,15 +109,31 @@ def llm_surf(llm_input: dict) -> str:
     else:
         content += fileProcessor.default_prompt + "\n"
 
-    functionCalling = FunctionCalling(azure_connector_surf.client)
-    results_string, results_json, function_name = functionCalling.generate_answer(
-        llm_input=llm_input, content=content
-    )
+    # running in multi-agent mode
+    if os.getenv("MODE") == "multi-agent":
+        MA = Multi_Agent(
+            ChatWithOpenai=ChatWithOpenai, client=azure_connector_surf.client
+        )
+        graph = MA.initialize_graph()
+        llm_output = MA.generate_multi_agent_answer(llm_input, graph)
+    # running in single-agent mode
+    elif os.getenv("MODE") == "single-agent":
+        if llm_input.get("new_message") and check_relevance(
+            azure_connector_surf, llm_input.get("new_message")
+        ):
+            llm_output["response"] = (
+                "I'm here to help with trading and financial market queries. If you think your ask relates to trading and isn't addressed, please report a bug using the bottom right panel."
+            )
+            return llm_output
+        SA = Single_Agent(azure_connector_surf.client)
+        results_string, results_json, function_name = SA.generate_answer(
+            llm_input=llm_input, content=content
+        )
+        llm_output["response"] = results_string
+        llm_output["chart_info"] = results_json
+        llm_output["function_call"] = function_name
 
-    llm_output["response"] = results_string
-    llm_output["chart_info"] = results_json
-    llm_output["function_call"] = function_name
-
-    llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
+    if not os.environ("DEBUG"):
+        llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
 
     return llm_output

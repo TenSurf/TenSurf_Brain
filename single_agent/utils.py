@@ -1,7 +1,7 @@
 import datetime
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-import single_agent.input_filter as input_filter
+import input_filter as input_filter
 
 
 messages = []

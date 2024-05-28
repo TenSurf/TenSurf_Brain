@@ -5,28 +5,23 @@ import requests
 from datetime import datetime, timedelta
 import pandas as pd
 
-import single_agent.input_filter as input_filter
+import input_filter as input_filter
 from single_agent.functions_json import functions
-from importnb import imports
 import os
 
-# if os.getenv("DEBUG"):
-# with imports("ipynb"):
-#     import function_calling.functions_python as functions_python
-# else:
-import single_agent.functions_python as functions_python
+import functions_python
 
 import single_agent.utils as utils
 
 
-class FunctionCalling:
+class Single_Agent:
 
     def __init__(self, client):
         self.client = client
         self.results_json = {}
 
     def generate_llm_response(
-        self, messages, functions, model, function_call, temperature=0.2
+        self, messages, functions, model, function_call, temperature=0
     ):
         response = self.client.chat.completions.create(
             model=model,
@@ -47,6 +42,7 @@ class FunctionCalling:
         results = ""
         if chat_response.choices[0].message.function_call == None:
             results = f"{chat_response.choices[0].message.content}"
+            function_name = None
         # when function calling happens
         else:
             # if the chat response was not none
@@ -61,8 +57,8 @@ class FunctionCalling:
                 input_filter.front_end_json_sample if llm_input is None else llm_input
             )
             FC = functions_python.FunctionCalls()
-
-            print(f"\n{chat_response.choices[0].message}\n")
+            
+            # print(f"\n{chat_response.choices[0].message}\n")
 
             # Filtering Inputs
             function_arguments = input_filter.input_filter(
@@ -298,6 +294,7 @@ class FunctionCalling:
 
             else:
                 results += f"{chat_response.choices[0].message.content}"
+                return results
 
         return results, function_name
 
@@ -312,7 +309,7 @@ class FunctionCalling:
         )
 
         # getting the result of the prompt
-        print(llm_input.get("history_message"))
+        # print(llm_input.get("history_message"))
 
         response = self.generate_llm_response(
             llm_input.get("history_message"),
