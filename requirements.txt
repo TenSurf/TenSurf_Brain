@@ -14,3 +14,4 @@ langgraph
 langchain
 langchain-core
 groq
+langchain-openai==0.1.7
