@@ -1,5 +1,6 @@
-from openai import OpenAI, AzureOpenAI
 import os
+from openai import OpenAI, AzureOpenAI
+from groq import Groq
 
 from dotenv import load_dotenv
 
@@ -10,38 +11,84 @@ from multi_agent import Multi_Agent
 load_dotenv()
 DEBUG = (os.getenv('DEBUG', 'True') == 'True')
 
+# class ChatWithOpenai:
+#     def __init__(
+#         self,
+#         system_message,
+#         model,
+#         temperature,
+#         max_tokens,
+#         client,
+#         default_user_messages=None,
+#     ):
+#         self.system_message = system_message
+#         self.model = model
+#         self.temperature = temperature
+#         self.max_tokens = max_tokens
+#         azure_connectto_surf = AzureConnecttoSurf()
+#         self.client = azure_connectto_surf.client
+#         self.messages = [{"role": "system", "content": system_message}]
+#         if default_user_messages:
+#             for user_message in default_user_messages:
+#                 self.messages += [{"role": "user", "content": user_message}]
+
+#     def chat(self, user_input):
+#         response = self.client.chat.completions.create(
+#             model=self.model,
+#             messages=self.messages + user_input,
+#             temperature=self.temperature,
+#             max_tokens=self.max_tokens,
+#         )
+#         return response.choices[0].message.content
+
+
 class ChatWithOpenai:
-    def __init__(
-        self,
-        system_message,
-        model,
-        temperature,
-        max_tokens,
-        client,
-        default_user_messages=None,
-    ):
+    def __init__(self, system_message, temperature, max_tokens, default_user_messages=None):
+        groqconnecttosurf = GroqConnecttoSurf()
         self.system_message = system_message
-        self.model = model
+        self.models = groqconnecttosurf.models
         self.temperature = temperature
         self.max_tokens = max_tokens
-        azure_connector_surf = AzureConnectorSurf()
-        self.client = azure_connector_surf.client
+        self.clients = groqconnecttosurf.clients
         self.messages = [{"role": "system", "content": system_message}]
         if default_user_messages:
             for user_message in default_user_messages:
                 self.messages += [{"role": "user", "content": user_message}]
 
     def chat(self, user_input):
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=self.messages + user_input,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-        )
-        return response.choices[0].message.content
+        for client, model in zip(self.clients, self.models):
+            try:
+                response = client.chat.completions.create(
+                  model=model,
+                  messages=self.messages + user_input,
+                  temperature=self.temperature,
+                  max_tokens=self.max_tokens
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+              print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
 
 
-class AzureConnectorSurf:
+class GroqConnecttoSurf:
+    def __init__(self) -> None:
+        self.models = [os.getenv("MODEL1"), os.getenv("MODEL1"), os.getenv("MODEL1"), os.getenv("MODEL2"), os.getenv("MODEL3")]
+        client1 = Groq(api_key=os.getenv("groq_api1"))
+        client2 = Groq(api_key=os.getenv("groq_api2"))
+        client3 = Groq(api_key=os.getenv("groq_api3"))
+        client4 = AzureOpenAI(
+            api_key=os.getenv("api_key1"),
+            api_version=os.getenv("azure_api_version"),
+            azure_endpoint=os.getenv("azure_api_endpoint")
+            )
+        client5 = AzureOpenAI(
+            api_key=os.getenv("api_key2"),
+            api_version=os.getenv("azure_api_version"),
+            azure_endpoint=os.getenv("azure_api_endpoint")
+            )
+        self.clients = [client1, client2, client3, client4, client5]
+
+
+class AzureConnecttoSurf:
     def __init__(self) -> None:
         self.api_endpoint = os.getenv("azure_api_endpoint")
         self.api_version = os.getenv("azure_api_version")
@@ -59,7 +106,7 @@ class AzureConnectorSurf:
         self.tts_model = os.getenv("tts_model2")
 
 
-class OpenaiConnectorSurf:
+class OpenaiConnecttoSurf:
     def __init__(self) -> None:
         self.client = OpenAI(api_key=os.getenv("openai_api_key"))
         self.GPT_MODEL = os.getenv("openai_GPT_MODEL_3")
@@ -93,7 +140,7 @@ def llm_surf(llm_input: dict) -> str:
         "function_call": None,
     }
 
-    azure_connector_surf = AzureConnectorSurf()
+    azure_connector_surf = AzureConnecttoSurf()
 
     content = ""
     fileProcessor = FileProcessor(azure_connector_surf)
