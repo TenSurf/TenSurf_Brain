@@ -99,10 +99,11 @@ class Utils:
 
     def run_greeting(self, state):
         greeting = self.ChatWithOpenai(system_message="You are an financial and trading assistant.",
-                                model="gpt_35_16k",
+                                # model="gpt_35_16k",
                                 temperature=0,
                                 max_tokens=100,
-                                client=self.client)
+                                # client=self.client
+                                )
         input = [{"role": "user", "content": "Hi"}]
         response = greeting.chat(input)
 
@@ -127,7 +128,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
 
         return {"messages": [function_message]}
 
-    def output_json_assigner(self, tool_name, response, symbol):
+    def output_json_assigner(self, tool_name, response, symbol, input_json):
         output_json = {}
         if tool_name == "calculate_sr":
             sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = response
@@ -138,6 +139,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             output_json["levels_scores"] = sr_importance
             output_json["function_name"] = tool_name
             output_json["symbol"] = symbol
+            output_json["timeframe"] = input_json["timeframe"]
         return output_json
 
     def tool_node(self, state):
@@ -166,16 +168,19 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
         
         if tool_name == "detect_trend":
             tool_input, results, correct_dates = tool_input
+            state["input_json"].update(tool_input)
             if not correct_dates:
                 function_message = FunctionMessage(
                     content=f"{tool_name} response: {results}", name=action.tool
                 )
                 return {"messages": [function_message], "output_json":output_json}
+        else:
+            state["input_json"].update(tool_input)
 
         tool_executor, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
         response = tool_executor.invoke(action)
         symbol = tool_input["symbol"]
-        output_json = self.output_json_assigner(tool_name, response, symbol)
+        output_json = self.output_json_assigner(tool_name, response, symbol, state["input_json"])
 
         function_message = FunctionMessage(
             content=f"{tool_name} response: {str(response)}", name=action.tool

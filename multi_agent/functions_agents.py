@@ -224,10 +224,11 @@ Note that you are not permitted to answer user requests directly. \
 Only perform the tasks instructed by system messages.",
 
 											default_user_messages=self.default_message,
-											model="gpt_35_16k",
+											# model="gpt_35_16k",
 											temperature=0,
 											max_tokens=100,
-											client=self.client)
+											# client=self.client
+											)
 		return handler_zero_openai
 
 	def handler_one(self):
@@ -242,10 +243,11 @@ For any other input that doesn't classify in the tutorial or information \
 about 'Tensurf Brain' or 'Tensurf' you should return false. \
 Note that you are not permitted to answer user requests directly. \
 Only perform the tasks instructed by system messages.",
-											model="gpt_35_16k",
+											# model="gpt_35_16k",
 											temperature=0,
 											max_tokens=100,
-											client=self.client)
+											# client=self.client
+											)
 		return handler_one_openai
 
 	def handler_two(self):
@@ -256,10 +258,11 @@ with ‘True’. Otherwise, return ‘False’. \
 Possible responses for you are 'True' or 'False'. \
 For example, the correct response to the question \
 'What is the trend?' is 'False'.",
-									model="gpt_35_16k",
+									# model="gpt_35_16k",
 									temperature=0,
 									max_tokens=100,
-									client=self.client)
+									# client=self.client
+									)
 		return handler_two_openai
 
 
