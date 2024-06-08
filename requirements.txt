@@ -1,12 +1,12 @@
 python-docx
 python-pptx
 openpyxl
-gradio
+# gradio
 influxdb_client 
 scikit-learn
 openai
 PyPDF2
-importnb
+# importnb
 plotly
 python-dotenv
 langchain_groq
