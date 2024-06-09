@@ -140,6 +140,8 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             output_json["function_name"] = tool_name
             output_json["symbol"] = symbol
             output_json["timeframe"] = input_json["timeframe"]
+        if tool_name == "calculate_sl":
+            output_json["stop_loss"] = response
         return output_json
 
     def tool_node(self, state):

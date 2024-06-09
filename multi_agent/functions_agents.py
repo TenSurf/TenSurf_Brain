@@ -68,7 +68,7 @@ class CalculateSR(BaseTool):
 	description = """Support and resistance levels represent price points on a chart where the odds favor a pause or reversal of a prevailing trend. \
 This function analyzes candlestick charts over a specified timeframe and lookback period to calculate these levels and their respective strengths. \
 Returns a dictionary containing five lists, each corresponding to a specific aspect of the calculated support and resistance levels: \
-1. levels_prices (list of floats): The prices at which support and resistance levels have been identified. \
+1. levels_prices (list of floats): The prices at which support and resistance levels have been identified. (Each point must not be specified that whether it is support or resistance.) \
 2. levels_start_timestamps (list of timestamps) \
 3. levels_detect_timestamps (list of timestamps) \
 4. levels_end_timestamps (list of timestamps) \
@@ -274,9 +274,9 @@ def create_irrelavant_handler(client, ChatWithOpenai):
 	class HandleIrrelevant(BaseTool):
 		name = "HandleIrrelevant"
 		description = """This function checks if the message contains financial or trading subjects or not. \
-	The output of this function is either True or False and the possible output of this function are 'True' or 'False'.: \
-	True: when the message contains financial or trading subjects. \
-	False: when the message request is not in these fields."""
+The output of this function is either True or False and the possible output of this function are 'True' or 'False'.: \
+True: when the message contains financial or trading subjects. \
+False: when the message request is not in these fields."""
 
 		args_schema: Type[BaseModel] = HandleIrrelevantSchema
 
