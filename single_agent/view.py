@@ -316,7 +316,7 @@ class Single_Agent:
             functions,
             os.getenv("azure_GPT_MODEL_3"),
             "auto",
-            0.2,
+            0,
         )
         res, function_name = self.get_results(
             llm_input,

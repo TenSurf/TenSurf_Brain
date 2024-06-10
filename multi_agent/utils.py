@@ -131,7 +131,8 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
     def output_json_assigner(self, tool_name, response, symbol, input_json):
         output_json = {}
         if tool_name == "calculate_sr":
-            sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = response
+            print(f"\nresponse: {response}\n")
+            sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance, hard_coded_response = response
             output_json["levels_prices"] = sr_value
             output_json["levels_start_timestamps"] = sr_start_date
             output_json["levels_detect_timestamps"] = sr_detect_date
@@ -140,8 +141,11 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             output_json["function_name"] = tool_name
             output_json["symbol"] = symbol
             output_json["timeframe"] = input_json["timeframe"]
+            output_json["response"] = hard_coded_response
         if tool_name == "calculate_sl":
             output_json["stop_loss"] = response
+        if tool_name == "calculate_tp":
+            output_json["take_profit"] = response
         return output_json
 
     def tool_node(self, state):
