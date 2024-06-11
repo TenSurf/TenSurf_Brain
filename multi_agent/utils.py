@@ -144,8 +144,12 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             output_json["response"] = hard_coded_response
         if tool_name == "calculate_sl":
             output_json["stop_loss"] = response
+            output_json["symbol"] = symbol
+            output_json["timeframe"] = input_json["timeframe"]
         if tool_name == "calculate_tp":
             output_json["take_profit"] = response
+            output_json["symbol"] = symbol
+            output_json["timeframe"] = input_json["timeframe"]
         return output_json
 
     def tool_node(self, state):
