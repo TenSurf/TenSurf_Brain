@@ -66,11 +66,14 @@ class ChatWithOpenai:
                     stream=bool(int(os.getenv("stream"))),
                 )
                 # print(f"client {self.clients.index(client)}")
+                # print(response)
+                # print(type(response))
                 if bool(int(os.getenv("stream"))):
-                    responses = []
+                    # responses = []
                     for chunk in response:
-                        responses.append(chunk.choices[0].delta.content)
-                    return responses
+                        # responses.append(chunk.choices[0].delta.content)
+                        yield chunk.choices[0].delta.content
+                    # return responses
                 return response.choices[0].message.content
             except Exception as e:
                 print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
