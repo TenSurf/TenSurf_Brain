@@ -42,14 +42,48 @@ DEBUG = (os.getenv('DEBUG', 'True') == 'True')
 #         return response.choices[0].message.content
 
 
+# class ChatWithOpenai:
+#     def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None):
+#         groqconnecttosurf = GroqConnecttoSurf()
+#         self.models = groqconnecttosurf.models
+#         self.clients = groqconnecttosurf.clients
+#         self.system_message = system_message
+#         self.temperature = temperature
+#         self.max_tokens = max_tokens
+#         self.messages = [{"role": "system", "content": system_message}]
+#         if default_user_messages:
+#             for user_message in default_user_messages:
+#                 self.messages += [{"role": "user", "content": user_message}]
+
+#     def chat(self, user_input):
+#         for client, model in zip(self.clients, self.models):
+#             try:
+#                 response = client.chat.completions.create(
+#                     model=model,
+#                     messages=self.messages + user_input,
+#                     temperature=self.temperature,
+#                     max_tokens=self.max_tokens,
+#                     stream=bool(int(os.getenv("stream"))),
+#                 )
+#                 if bool(int(os.getenv("stream"))):
+#                     # responses = []
+#                     for chunk in response:
+#                         # responses.append(chunk.choices[0].delta.content)
+#                         yield chunk.choices[0].delta.content
+#                     # return responses
+#                 return response.choices[0].message.content
+#             except Exception as e:
+#                 print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
+
+
 class ChatWithOpenai:
     def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None):
         groqconnecttosurf = GroqConnecttoSurf()
-        self.models = groqconnecttosurf.models
-        self.clients = groqconnecttosurf.clients
         self.system_message = system_message
+        self.models = groqconnecttosurf.models
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.clients = groqconnecttosurf.clients
         self.messages = [{"role": "system", "content": system_message}]
         if default_user_messages:
             for user_message in default_user_messages:
@@ -66,11 +100,8 @@ class ChatWithOpenai:
                     stream=bool(int(os.getenv("stream"))),
                 )
                 if bool(int(os.getenv("stream"))):
-                    # responses = []
                     for chunk in response:
-                        # responses.append(chunk.choices[0].delta.content)
                         yield chunk.choices[0].delta.content
-                    # return responses
                 return response.choices[0].message.content
             except Exception as e:
                 print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
