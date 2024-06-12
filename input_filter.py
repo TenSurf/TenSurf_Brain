@@ -4,7 +4,7 @@ import re
 
 
 date_format = "%b-%d-%Y %H:%M:%S"
-now = utils.datetime.now()
+now = utils.datetime.utcnow()
 
 
 # setting the given time with the clock of the server
@@ -35,7 +35,7 @@ def default_timedelta(date: str, function_arguments_lookback: str) -> str:
         match = pattern.search(function_arguments_lookback)
         lookback_number = int(match.group(1))
         lookback_unit = match.group(2)
-    
+
     if "." in date:
         date = date.split(".")[0]
     

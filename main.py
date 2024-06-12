@@ -45,11 +45,11 @@ DEBUG = (os.getenv('DEBUG', 'True') == 'True')
 class ChatWithOpenai:
     def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None):
         groqconnecttosurf = GroqConnecttoSurf()
-        self.system_message = system_message
         self.models = groqconnecttosurf.models
+        self.clients = groqconnecttosurf.clients
+        self.system_message = system_message
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.clients = groqconnecttosurf.clients
         self.messages = [{"role": "system", "content": system_message}]
         if default_user_messages:
             for user_message in default_user_messages:
@@ -65,6 +65,15 @@ class ChatWithOpenai:
                     max_tokens=self.max_tokens,
                     stream=bool(int(os.getenv("stream"))),
                 )
+                # print(f"client {self.clients.index(client)}")
+                # print(response)
+                # print(type(response))
+                if bool(int(os.getenv("stream"))):
+                    # responses = []
+                    for chunk in response:
+                        # responses.append(chunk.choices[0].delta.content)
+                        yield chunk.choices[0].delta.content
+                    # return responses
                 return response.choices[0].message.content
             except Exception as e:
                 print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")

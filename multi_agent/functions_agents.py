@@ -75,6 +75,7 @@ Returns a dictionary containing five lists, each corresponding to a specific asp
 5. levels_scores (list of floats): Scores associated with each level, indicating the strength or significance of the level. Higher scores typically imply stronger levels."""
 
 	args_schema: Type[BaseModel] = PropertiesCalculateSR
+	return_direct: bool = True
 
 	def _run(
 			self, symbol: str = None, timeframe: str = None, lookback_days: str = None
@@ -86,8 +87,13 @@ Returns a dictionary containing five lists, each corresponding to a specific asp
 						}
 		
 		fc = functions_python.FunctionCalls()
+		response = fc.calculate_sr(parameters)
 
-		return fc.calculate_sr(parameters)
+		sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = response
+		hard_coded_response = f"The support and resistance levels for {symbol} based on historical price data with a lookback period of {lookback_days} days and a timeframe of {timeframe} are as follows:\n\n- Levels: {sr_value}\n\nThese levels are determined based on historical price data and indicate areas where the price is likely to encounter support or resistance. The associated scores indicate the strength or significance of each level, with higher scores indicating stronger levels."
+
+		# return fc.calculate_sr(parameters)
+		return sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance, hard_coded_response
 
 
 ######## Calculate Stop Loss ########
@@ -313,6 +319,7 @@ def create_agent_tools(client, ChatWithOpenai):
 	SL = CalculateSL()
 	TP = CalculateTp()
 	Bias = BiasDetection()
+
 	Handler = create_irrelavant_handler(client, ChatWithOpenai)
 
 	tools = [Trend, SR, TP, SL, Bias, Handler]
