@@ -160,6 +160,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
         messages = state["messages"]
         last_message = messages[-1]
         tool_input = json.loads(
+
             last_message.additional_kwargs["function_call"]["arguments"]
         )
         output_json = {}

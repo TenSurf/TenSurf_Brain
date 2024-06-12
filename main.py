@@ -65,9 +65,6 @@ class ChatWithOpenai:
                     max_tokens=self.max_tokens,
                     stream=bool(int(os.getenv("stream"))),
                 )
-                # print(f"client {self.clients.index(client)}")
-                # print(response)
-                # print(type(response))
                 if bool(int(os.getenv("stream"))):
                     # responses = []
                     for chunk in response:
