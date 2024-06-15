@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from file_processor import FileProcessor
 from single_agent import Single_Agent
 from multi_agent import Multi_Agent
+import database
 
 load_dotenv()
 DEBUG = (os.getenv('DEBUG', 'True') == 'True')
@@ -102,6 +103,7 @@ class ChatWithOpenai:
                 if bool(int(os.getenv("stream"))):
                     for chunk in response:
                         yield chunk.choices[0].delta.content
+                        print(chunk.choices[0].delta.content)
                 return response.choices[0].message.content
             except Exception as e:
                 print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
@@ -220,5 +222,8 @@ def llm_surf(llm_input: dict) -> str:
 
     if not DEBUG:
         llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
+
+    database.save_to_vector_db(llm_input["new_message"])
+    database.save_to_vector_db(llm_output["response"])
 
     return llm_output
