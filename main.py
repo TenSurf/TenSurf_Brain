@@ -223,7 +223,7 @@ def llm_surf(llm_input: dict) -> str:
     if not DEBUG:
         llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
 
-    database.save_to_vector_db(llm_input["new_message"])
-    database.save_to_vector_db(llm_output["response"])
+    # database.save_to_vector_db(llm_input["new_message"])
+    # database.save_to_vector_db(llm_output["response"])
 
     return llm_output
