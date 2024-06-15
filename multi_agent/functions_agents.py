@@ -13,7 +13,7 @@ from unstructured.partition.html        import partition_html
 from sec_api                            import QueryApi
 import requests
 import json
-from utils 								import embedding_search
+from multi_agent.utils 					import embedding_search
 from gpt_researcher import GPTResearcher
 
 
@@ -376,7 +376,6 @@ class Search10k(BaseTool):
             link = fillings[0]['linkToFilingDetails']
             answer = embedding_search(link, ask)
             return answer
-
 
 
 class Handlers:
