@@ -5,6 +5,17 @@ from langgraph.prebuilt import ToolExecutor
 
 import functions_python
 
+from langchain.tools.yahoo_finance_news import YahooFinanceNewsTool
+from langchain.text_splitter            import CharacterTextSplitter
+from langchain.embeddings               import AzureOpenAIEmbeddings
+from langchain_community.vectorstores   import FAISS
+from unstructured.partition.html        import partition_html
+from sec_api                            import QueryApi
+import requests
+import json
+from utils 								import embedding_search
+from gpt_researcher import GPTResearcher
+
 
 ######## Trend Detection ########
 class PropertiesCalculateTrend(BaseModel):
@@ -204,6 +215,170 @@ Returns a number between -3 and 3 that represents the trend’s intensity and di
 		return fc.get_bias(parameters)
 
 
+######## LLM Researcher ########
+class PropertiesLLMResearcher(BaseModel):
+    query: str = Field(..., description="A random topic that will be searched on the internet")
+
+class LLMResearcher(BaseTool):
+    name = "LLMResearcher"
+    description = """Useful to do research and return relevant results"""
+
+    args_schema: Type[BaseModel] = PropertiesLLMResearcher
+
+    async def _run(
+        self, query: str
+    ) -> str:
+      report_type = "research_report"
+      researcher = GPTResearcher(query, report_type)
+
+      return await researcher.conduct_research()
+
+
+######## Search The Internet ########
+class PropertiesSearchTheInternet(BaseModel):
+    query: str = Field(..., description="A random topic that will be searched on the internet")
+
+class SearchTheInternet(BaseTool):
+    name = "SearchTheInternet"
+    description = """Useful to search the internet about a a given topic and return relevant results"""
+
+    args_schema: Type[BaseModel] = PropertiesSearchTheInternet
+
+    def _run(
+        self, query: str
+    ) -> dict:
+            top_result_to_return = 4
+            url = "https://google.serper.dev/search"
+            payload = json.dumps({"q": query})
+            headers = {
+                'X-API-KEY': '77976766163a61a4bae1ed8672ae79e916955783',
+                'content-type': 'application/json'
+            }
+            response = requests.request("POST", url, headers=headers, data=payload)
+            results = response.json()['organic']
+            string = []
+            for result in results[:top_result_to_return]:
+              try:
+                string.append('\n'.join([
+                    f"Title: {result['title']}", f"Link: {result['link']}",
+                    f"Snippet: {result['snippet']}", "\n-----------------"
+                ]))
+              except KeyError:
+                next
+
+            return '\n'.join(string)
+
+
+######## Search News ########
+class PropertiesSearchNews(BaseModel):
+    query: str = Field(..., description="A random topic that will be searched on the internet")
+
+
+class SearchNews(BaseTool):
+    name = "SearchNews"
+    description = """Useful to search news about a company, stock or any other topic and return relevant results"""
+
+    args_schema: Type[BaseModel] = PropertiesSearchNews
+
+    def _run(
+        self, query: str
+    ) -> dict:
+            top_result_to_return = 4
+            url = "https://google.serper.dev/news"
+            payload = json.dumps({"q": query})
+            headers = {
+                'X-API-KEY': '77976766163a61a4bae1ed8672ae79e916955783',
+                'content-type': 'application/json'
+            }
+            response = requests.request("POST", url, headers=headers, data=payload)
+            results = response.json()['news']
+            string = []
+            for result in results[:top_result_to_return]:
+              try:
+                string.append('\n'.join([
+                    f"Title: {result['title']}", f"Link: {result['link']}",
+                    f"Snippet: {result['snippet']}", "\n-----------------"
+                ]))
+              except KeyError:
+                next
+
+            return '\n'.join(string)
+
+
+######## 10Q ########
+class PropertiesSearch10q(BaseModel):
+    stock: str = Field(..., description="A random stock.")
+    ask: str = Field(..., description="Question from the 10-Q of the stock")
+
+class Search10q(BaseTool):
+    name = "Search10q"
+    description = """Useful to search information from the latest 10-Q form for a given stock.
+                     The input to this tool should be stock and ask representing the stock ticker you are interested and what
+                     question you have from it."""
+
+    args_schema: Type[BaseModel] = PropertiesSearch10q
+
+    def _run(
+        self, stock: str, ask: str
+    ) -> dict:
+            queryApi = QueryApi(api_key="befd094ddadf6a9e080bf194b6d9197e753ec1d4226fc8e595ed717b2f1bc3a5")
+            query = {
+              "query": {
+                "query_string": {
+                  "query": f"ticker:{stock} AND formType:\"10-Q\""
+                }
+              },
+              "from": "0",
+              "size": "1",
+              "sort": [{ "filedAt": { "order": "desc" }}]
+            }
+
+            fillings = queryApi.get_filings(query)['filings']
+            if len(fillings) == 0:
+              return "Sorry, I couldn't find any filling for this stock, check if the ticker is correct."
+            link = fillings[0]['linkToFilingDetails']
+            print(link)
+            print(ask)
+            answer = embedding_search(link, ask)
+            return answer
+
+######## 10K ########
+class PropertiesSearch10k(BaseModel):
+    stock: str = Field(..., description="A random stock.")
+    ask: str = Field(..., description="Question from the 10-k of the stock")
+
+class Search10k(BaseTool):
+    name = "Search10k"
+    description = """Useful to search information from the latest 10-K form for a given stock.
+                     The input to this tool should be stock and ask representing the stock ticker you are interested and what
+                     question you have from it."""
+
+    args_schema: Type[BaseModel] = PropertiesSearch10k
+
+    def _run(
+        self, stock: str, ask: str
+    ) -> dict:
+            queryApi = QueryApi(api_key="befd094ddadf6a9e080bf194b6d9197e753ec1d4226fc8e595ed717b2f1bc3a5")
+            query = {
+              "query": {
+                "query_string": {
+                  "query": f"ticker:{stock} AND formType:\"10-K\""
+                }
+              },
+              "from": "0",
+              "size": "1",
+              "sort": [{ "filedAt": { "order": "desc" }}]
+            }
+
+            fillings = queryApi.get_filings(query)['filings']
+            if len(fillings) == 0:
+              return "Sorry, I couldn't find any filling for this stock, check if the ticker is correct."
+            link = fillings[0]['linkToFilingDetails']
+            answer = embedding_search(link, ask)
+            return answer
+
+
+
 class Handlers:
 	def __init__(self, client, ChatWithOpenai):
 		self.client = client
@@ -319,11 +494,16 @@ def create_agent_tools(client, ChatWithOpenai):
 	SL = CalculateSL()
 	TP = CalculateTp()
 	Bias = BiasDetection()
-
+	LLM_Researcher = LLMResearcher()
+	SearchInternet = SearchTheInternet()
+	NewsSearch = SearchNews()
+	TenQ = Search10q()
+	Tenk = Search10k()
 	Handler = create_irrelavant_handler(client, ChatWithOpenai)
 
-	tools = [Trend, SR, TP, SL, Bias, Handler]
+	tools = [Trend, SR, TP, SL, Bias, Handler, SearchInternet, NewsSearch, Tenk, TenQ, LLM_Researcher]
 	tool_executor = ToolExecutor(tools)
 	trading_tools = [Trend, SR, SL, TP, Bias]
+	researcher_tools = [SearchInternet, NewsSearch, Tenk, TenQ, LLM_Researcher]
 	
-	return tool_executor, trading_tools
+	return tool_executor, trading_tools, researcher_tools
