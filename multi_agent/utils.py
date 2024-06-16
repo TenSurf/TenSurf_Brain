@@ -1,3 +1,4 @@
+import os
 import json
 import operator
 from typing import Annotated, Sequence, TypedDict
@@ -284,45 +285,32 @@ def download_form_html(url):
   return response.text
 
 
-api_type = "azure"
-api_endpoint = 'https://tensurfbrain1.openai.azure.com/'
-api_version = '2023-10-01-preview'
-api_key = '80ddd1ad72504f2fa226755d49491a61'
-
-client = AzureOpenAI(
-    api_key=api_key,
-    api_version=api_version,
-    azure_endpoint=api_endpoint
-)
-
-embeddings=AzureOpenAIEmbeddings(deployment="embedding-ada-002",
-                            model= "text-embedding-ada-002",
-                            azure_endpoint="https://tensurfbrain1.openai.azure.com/",
-                            openai_api_type="azure",
-                            chunk_size=1000)
-
 def embedding_search(url, ask):
-  text = download_form_html(url)
-  elements = partition_html(text=text)
-  content = "\n".join([str(el) for el in elements])
-  text_splitter = CharacterTextSplitter(
-      separator = "\n",
-      chunk_size = 1000,
-      chunk_overlap  = 150,
-      length_function = len,
-      is_separator_regex = False)
-  docs = text_splitter.create_documents([content])
-  retriever = FAISS.from_documents(docs, embeddings).as_retriever()
-  answers = retriever.get_relevant_documents(ask, top_k=4)
-  answers = "\n\n".join([a.page_content for a in answers])
-  return answers
+    embeddings=AzureOpenAIEmbeddings(deployment="embedding-ada-002",
+                                model= "text-embedding-ada-002",
+                                azure_endpoint="https://tensurfbrain1.openai.azure.com/",
+                                openai_api_type="azure",
+                                chunk_size=1000)
+    text = download_form_html(url)
+    elements = partition_html(text=text)
+    content = "\n".join([str(el) for el in elements])
+    text_splitter = CharacterTextSplitter(
+        separator = "\n",
+        chunk_size = 1000,
+        chunk_overlap  = 150,
+        length_function = len,
+        is_separator_regex = False)
+    docs = text_splitter.create_documents([content])
+    retriever = FAISS.from_documents(docs, embeddings).as_retriever()
+    answers = retriever.get_relevant_documents(ask, top_k=4)
+    answers = "\n\n".join([a.page_content for a in answers])
+    return answers
 
 
 def create_supervisor():
-    api_type = "azure"
-    api_endpoint = 'https://tensurfbrain1.openai.azure.com/'
-    api_version = '2023-10-01-preview'
-    api_key = '80ddd1ad72504f2fa226755d49491a61'
+    api_endpoint = os.getenv("azure_api_endpoint")
+    api_version = os.getenv("azure_api_version")
+    api_key = os.getenv("api_key1")
     
     llm = AzureChatOpenAI(
                   api_key=api_key,

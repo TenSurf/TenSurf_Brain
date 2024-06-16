@@ -13,7 +13,7 @@ from unstructured.partition.html        import partition_html
 from sec_api                            import QueryApi
 import requests
 import json
-from multi_agent.utils 					import embedding_search
+import multi_agent.utils as utils
 from gpt_researcher import GPTResearcher
 
 
@@ -339,7 +339,7 @@ class Search10q(BaseTool):
             link = fillings[0]['linkToFilingDetails']
             print(link)
             print(ask)
-            answer = embedding_search(link, ask)
+            answer = utils.embedding_search(link, ask)
             return answer
 
 ######## 10K ########
@@ -374,7 +374,7 @@ class Search10k(BaseTool):
             if len(fillings) == 0:
               return "Sorry, I couldn't find any filling for this stock, check if the ticker is correct."
             link = fillings[0]['linkToFilingDetails']
-            answer = embedding_search(link, ask)
+            answer = utils.embedding_search(link, ask)
             return answer
 
 
