@@ -245,7 +245,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
 
         return "continue"
     
-    def agent_router(state):
+    def agent_router(self, state):
         messages = state["messages"]
         last_message = messages[-1]
 
