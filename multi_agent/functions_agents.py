@@ -273,7 +273,6 @@ class SearchTheInternet(BaseTool):
 class PropertiesSearchNews(BaseModel):
     query: str = Field(..., description="A random topic that will be searched on the internet")
 
-
 class SearchNews(BaseTool):
     name = "SearchNews"
     description = """Useful to search news about a company, stock or any other topic and return relevant results"""
@@ -341,6 +340,7 @@ class Search10q(BaseTool):
             print(ask)
             answer = utils.embedding_search(link, ask)
             return answer
+
 
 ######## 10K ########
 class PropertiesSearch10k(BaseModel):

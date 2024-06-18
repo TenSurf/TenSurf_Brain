@@ -105,6 +105,17 @@ Ensure your analysis includes financial health, market position, recent developm
         return graph
 
     def generate_multi_agent_answer(self, input_json, graph):
+        # async for message in graph.astream(
+        #     {
+        #         "messages": [
+        #             HumanMessage(
+        #                 content=input_json["new_message"]
+        #             )
+        #         ],
+        #         "input_json": input_json
+        #     },
+        #     {"recursion_limit": 150},
+        # ):
         generated_messages = graph.stream(
             {
                 "messages": [
@@ -114,10 +125,8 @@ Ensure your analysis includes financial health, market position, recent developm
                 ],
                 "input_json": input_json
             },
-            # Maximum number of steps to take in the graph
             {"recursion_limit": 150},
         )
-        
         generated_messages = list(generated_messages)
         k = list(generated_messages[-1].keys())[0]
         if "output_json" in generated_messages[-1][k]:
