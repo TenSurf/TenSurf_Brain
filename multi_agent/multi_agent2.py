@@ -34,30 +34,9 @@ And Do not mention 'FINAL ANSWER' in final asnwer."""
         )
         trading_node = functools.partial(self.utils.agent_node, agent=trading_agent, name="Trading")
 
-#         researcher_agent = self.utils.create_agent(
-#             self.utils.llm,
-#             researcher_tools_list,
-#             system_message="""You are an assistant with the following capabilities given to you by your tools: \
-# SearchInternet: Search the internet for relevant information. \
-# NewsSearch: Search news sources for recent and historical news. \
-# TenQ: Retrieve and analyze quarterly reports (10-Q) from SEC EDGAR. \
-# TenK: Retrieve and analyze annual reports (10-K) from SEC EDGAR. \
-# Researcher: Conduct thorough research and provide detailed analysis. \
-# Your job is to answer the user's request and prompt based on your tools. You should not answer the user without using your tools.\
-# You are the agent following the trading agent, so you will likely see some messages inside 'state.' Ignore what happened before you and act independently to answer the user's request. \
-# Your primary objective is to research SEC EDGAR filings for stocks and provide comprehensive investment analysis. \
-# you can use the SearchInternet, NewsSearch, TenQ, TenK, and Researcher tools multiple times. \
-# Ensure your analysis includes financial health, market position, recent developments, and potential investment risks and opportunities. \
-# """
-# )
-        
-        # researcher_node = functools.partial(self.utils.agent_node, agent=researcher_agent, name="Researcher")
-
         workflow = StateGraph(AgentState)
 
         workflow.add_node("Trading", trading_node)
-        # workflow.add_node("Researcher", researcher_node)
-        #workflow.add_node("supervisor", supervisor_node)
         workflow.add_node("call_tool", self.utils.tool_node)
         workflow.add_node("Handler", self.utils.run_Handler)
         workflow.add_node("Greeting", self.utils.run_greeting)
@@ -66,23 +45,11 @@ And Do not mention 'FINAL ANSWER' in final asnwer."""
         workflow.add_edge("Greeting", END)
         workflow.add_edge("Tutorial", END)
 
-        # workflow.add_conditional_edges(
-        #     "Handler",
-        #     self.utils.router,
-        #     {"continue": "supervisor", "Greeting": "Greeting", "Tutorial": "Tutorial", "end": END},
-        # )
-
         workflow.add_conditional_edges(
             "Handler",
             self.utils.router,
             {"continue": "Trading", "Greeting": "Greeting", "Tutorial": "Tutorial", "end": END},
         )
-
-        # workflow.add_conditional_edges(
-        #     "supervisor",
-        #     self.utils.agent_router,
-        #     {"Trading": "Trading", "Researcher": "Researcher"},
-        # )
 
         workflow.add_conditional_edges(
             "Trading",
@@ -90,18 +57,11 @@ And Do not mention 'FINAL ANSWER' in final asnwer."""
             {"continue": "Trading", "call_tool": "call_tool", "end": END},
         )
 
-        # workflow.add_conditional_edges(
-        #     "Researcher",
-        #     self.utils.router,
-        #     {"continue": "Researcher", "call_tool": "call_tool", "end": END},
-        # )
-
         workflow.add_conditional_edges(
             "call_tool",
             lambda x: x["sender"],
             {
-                "Trading": "Trading",
-                # "Researcher": "Researcher"
+                "Trading": "Trading"
             },
         )
         workflow.set_entry_point("Handler")
