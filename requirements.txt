@@ -1,19 +1,22 @@
 python-docx
 python-pptx
 openpyxl
-# gradio
 influxdb_client 
 scikit-learn
 openai
 PyPDF2
-# importnb
 plotly
 python-dotenv
 langchain_groq
 langgraph
 langchain
+langchain-community
 langchain-core
 groq
 langchain-openai==0.1.7
 pytz
 pandas
+unstructured
+sec-api
+gpt-researcher
+tokencost
