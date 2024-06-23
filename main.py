@@ -1,13 +1,15 @@
 import os
 from openai import OpenAI, AzureOpenAI
 from groq import Groq
-
 from dotenv import load_dotenv
+from tokencost import calculate_prompt_cost
 
+import config
 from file_processor import FileProcessor
 from single_agent import Single_Agent
 from multi_agent import Multi_Agent
-import database
+from multi_agent.utils import model_and_client_chooser
+
 
 load_dotenv()
 DEBUG = (os.getenv('DEBUG', 'True') == 'True')
@@ -79,19 +81,21 @@ DEBUG = (os.getenv('DEBUG', 'True') == 'True')
 
 class ChatWithOpenai:
     def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None):
-        groqconnecttosurf = GroqConnecttoSurf()
+        self.groqconnecttosurf = GroqConnecttoSurf()
         self.system_message = system_message
-        self.models = groqconnecttosurf.models
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.clients = groqconnecttosurf.clients
         self.messages = [{"role": "system", "content": system_message}]
         if default_user_messages:
             for user_message in default_user_messages:
                 self.messages += [{"role": "user", "content": user_message}]
 
     def chat(self, user_input):
-        for client, model in zip(self.clients, self.models):
+
+        # choosing the list of models and clients based on the users token
+        models, clients, tokens = model_and_client_chooser(user_input, self.groqconnecttosurf)
+
+        for client, model in zip(clients, models):
             try:
                 response = client.chat.completions.create(
                     model=model,
@@ -104,35 +108,53 @@ class ChatWithOpenai:
                     for chunk in response:
                         yield chunk.choices[0].delta.content
                         print(chunk.choices[0].delta.content)
+                
+                if model == "llama3-70b-8192":
+                    model = "groq/llama3-70b-8192"
+                elif model == "gpt_35_16k":
+                    model="azure/gpt-35-turbo-16k"
+                elif model == "gpt_4_32k":
+                    model = "azure/gpt-4-32k"
+                elif model == 'gpt-4o':
+                    model = "azure/gpt-4o"
+                cost = calculate_prompt_cost(self.messages + user_input, model)
                 return response.choices[0].message.content
             except Exception as e:
-                print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
+                config.logging.error(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
+                # print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
 
 
 class GroqConnecttoSurf:
     def __init__(self) -> None:
-        self.models = [os.getenv("MODEL1"), os.getenv("MODEL1"), os.getenv("MODEL1"), os.getenv("MODEL2"), os.getenv("MODEL3")]
-        client1 = Groq(api_key=os.getenv("groq_api1"))
-        client2 = Groq(api_key=os.getenv("groq_api2"))
-        client3 = Groq(api_key=os.getenv("groq_api3"))
-        client4 = AzureOpenAI(
-            api_key=os.getenv("api_key1"),
+        self.models_low = [os.getenv("MODEL_LLAMA370B_8192"), os.getenv("MODEL_LLAMA370B_8192"), os.getenv("MODEL_LLAMA370B_8192"), os.getenv("MODEL_GPT4O"), os.getenv("MODEL_GPT35_16K"), os.getenv("MODEL_GPT4_32K")]
+        self.models_mid = [os.getenv("MODEL_LLAMA370B_8192"), os.getenv("MODEL_LLAMA370B_8192"), os.getenv("MODEL_LLAMA370B_8192"), os.getenv("MODEL_GPT35_16K"), os.getenv("MODEL_GPT4_32K")]
+        self.models_high = [os.getenv("MODEL_GPT35_16K"), os.getenv("MODEL_GPT4_32K")]
+        client_groq1 = Groq(api_key=os.getenv("groq_api1"))
+        client_groq2 = Groq(api_key=os.getenv("groq_api2"))
+        client_gorq3 = Groq(api_key=os.getenv("groq_api3"))
+        client_gpt35 = AzureOpenAI(
+            api_key=os.getenv("azure_api_key1"),
             api_version=os.getenv("azure_api_version"),
             azure_endpoint=os.getenv("azure_api_endpoint")
             )
-        client5 = AzureOpenAI(
-            api_key=os.getenv("api_key2"),
+        client_gpt4 = AzureOpenAI(
+            api_key=os.getenv("azure_api_key2"),
             api_version=os.getenv("azure_api_version"),
             azure_endpoint=os.getenv("azure_api_endpoint")
             )
-        self.clients = [client1, client2, client3, client4, client5]
+        client_gpt4o = AzureOpenAI(
+            api_key=os.getenv("azure_api_key1"),
+        )
+        self.clients_low = [client_groq1, client_groq2, client_gorq3, client_gpt4o, client_gpt35, client_gpt4]
+        self.clients_mid = [client_groq1, client_groq2, client_gorq3, client_gpt35, client_gpt4]
+        self.clients_high = [client_gpt35, client_gpt4]
 
 
 class AzureConnecttoSurf:
     def __init__(self) -> None:
         self.api_endpoint = os.getenv("azure_api_endpoint")
         self.api_version = os.getenv("azure_api_version")
-        self.api_key = os.getenv("azure_api_key")
+        self.api_key = os.getenv("azure_api_key1")
         self.client = AzureOpenAI(
             api_key=self.api_key,
             api_version=self.api_version,
@@ -171,7 +193,7 @@ def check_relevance(connector_surf, prompt: str):
 
 
 # class llm_surf:
-def llm_surf(llm_input: dict) -> str:
+async def llm_surf(llm_input: dict) -> str:
 
     llm_output = {
         "response": "",
@@ -201,7 +223,7 @@ def llm_surf(llm_input: dict) -> str:
         MA = Multi_Agent(
             ChatWithOpenai=ChatWithOpenai, client=azure_connector_surf.client
         )
-        graph = MA.initialize_graph()
+        graph = await MA.initialize_graph()
         llm_output = MA.generate_multi_agent_answer(llm_input, graph)
     # running in single-agent mode
     elif os.getenv("MODE") == "single-agent":

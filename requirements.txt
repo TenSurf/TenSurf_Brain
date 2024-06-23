@@ -19,3 +19,4 @@ pandas
 unstructured
 sec-api
 gpt-researcher
+tokencost

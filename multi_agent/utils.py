@@ -23,6 +23,7 @@ from unstructured.partition.html        import partition_html
 from sec_api                            import QueryApi
 import requests
 import json
+from tokencost import count_message_tokens
 
 class Utils:
     def __init__(self, ChatWithOpenai, client):
@@ -413,3 +414,25 @@ def supervisor_node(state):
       "messages": [result],
       "sender": 'supervisor',
   }
+
+
+def model_and_client_chooser(user_input, groqconnecttosurf):
+    tokens = count_message_tokens(
+        {"role": "user", "content":user_input}, 
+        model='azure/gpt-4o'
+    )
+    if tokens < 4096:
+        models = groqconnecttosurf.models_low
+        clients = groqconnecttosurf.clients_low
+    else:
+        tokens = count_message_tokens(
+            {"role": "user", "content":user_input}, 
+            model='groq/llama3-70b-8192'
+        )
+        if tokens < 8192:
+            models = groqconnecttosurf.models_mid
+            clients = groqconnecttosurf.clients_mid
+        else:
+            models = groqconnecttosurf.models_high
+            clients = groqconnecttosurf.clients_high
+    return models, clients, tokens

@@ -13,7 +13,7 @@ class Multi_Agent:
         self.client = client
         self.utils = Utils(self.ChatWithOpenai, self.client)
 
-    def initialize_graph(self):
+    async def initialize_graph(self):
         _, trading_tools_list, researcher_tools_list = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
         trading_agent = self.utils.create_agent(
             self.utils.llm,
