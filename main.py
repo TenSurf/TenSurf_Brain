@@ -208,4 +208,7 @@ def llm_surf(llm_input: dict) -> str:
     if not DEBUG:
         llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
 
+    if "response" in llm_output["chart_info"]:
+        llm_output["response"] = llm_output["chart_info"]["response"]
+    
     return llm_output
