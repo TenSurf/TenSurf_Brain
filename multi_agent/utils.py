@@ -170,22 +170,27 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             returns the result."""
         messages = state["messages"]
         last_message = messages[-1]
-        tool_input = json.loads(
-            last_message.additional_kwargs["function_call"]["arguments"]
-        )
+        tool_input = {}
+        if "function_call" in last_message.additional_kwargs:
+            if "arguments" in last_message.additional_kwargs["function_call"]:
+                tool_input = json.loads(
+                    last_message.additional_kwargs["function_call"]["arguments"]
+                )
+                symbol = tool_input["symbol"]
+                tool_name = last_message.additional_kwargs["function_call"]["name"].split(".")[-1]
+                tool_input = input_filter.input_filter(tool_name, tool_input, state["input_json"])
+
         output_json = {}
 
         if len(tool_input) == 1 and "__arg1" in tool_input:
             tool_input = next(iter(tool_input.values()))
 
-        tool_name = last_message.additional_kwargs["function_call"]["name"].split(".")[-1]
 
         action = ToolInvocation(
             tool=tool_name,
             tool_input=tool_input,
         )
 
-        tool_input = input_filter.input_filter(tool_name, tool_input, state["input_json"])
         
         if tool_name == "detect_trend":
             tool_input, results, correct_dates = tool_input
@@ -200,7 +205,6 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
 
         tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
         response = tool_executor.invoke(action)
-        symbol = tool_input["symbol"]
         output_json = self.output_json_assigner(tool_name, response, symbol, state["input_json"])
 
         function_message = FunctionMessage(
@@ -377,7 +381,7 @@ def model_and_client_chooser(user_input, groqconnecttosurf):
     tokens = count_message_tokens(
         user_input, 
         # model='azure/gpt-4o'
-        model="gpt-3.5-turbo"
+        model="gpt-3.5-turbo-0613"
     )
     if tokens < 4096:
         models = groqconnecttosurf.models_low
