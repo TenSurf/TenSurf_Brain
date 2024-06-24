@@ -9,7 +9,7 @@ from single_agent import Single_Agent
 from multi_agent import Multi_Agent
 
 load_dotenv()
-DEBUG = (os.getenv('DEBUG', 'True') == 'True')
+DEBUG = os.getenv("DEBUG", "True") == "True"
 
 # class ChatWithOpenai:
 #     def __init__(
@@ -43,7 +43,9 @@ DEBUG = (os.getenv('DEBUG', 'True') == 'True')
 
 
 class ChatWithOpenai:
-    def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None):
+    def __init__(
+        self, system_message, temperature=0, max_tokens=4096, default_user_messages=None
+    ):
         groqconnecttosurf = GroqConnecttoSurf()
         self.system_message = system_message
         self.models = groqconnecttosurf.models
@@ -67,25 +69,33 @@ class ChatWithOpenai:
                 )
                 return response.choices[0].message.content
             except Exception as e:
-                print(f"Error with client: client{self.clients.index(client)}. Exception: {e}")
+                print(
+                    f"Error with client: client{self.clients.index(client)}. Exception: {e}"
+                )
 
 
 class GroqConnecttoSurf:
     def __init__(self) -> None:
-        self.models = [os.getenv("MODEL1"), os.getenv("MODEL1"), os.getenv("MODEL1"), os.getenv("MODEL2"), os.getenv("MODEL3")]
+        self.models = [
+            os.getenv("MODEL1"),
+            os.getenv("MODEL1"),
+            os.getenv("MODEL1"),
+            os.getenv("MODEL2"),
+            os.getenv("MODEL3"),
+        ]
         client1 = Groq(api_key=os.getenv("groq_api1"))
         client2 = Groq(api_key=os.getenv("groq_api2"))
         client3 = Groq(api_key=os.getenv("groq_api3"))
         client4 = AzureOpenAI(
             api_key=os.getenv("api_key1"),
             api_version=os.getenv("azure_api_version"),
-            azure_endpoint=os.getenv("azure_api_endpoint")
-            )
+            azure_endpoint=os.getenv("azure_api_endpoint"),
+        )
         client5 = AzureOpenAI(
             api_key=os.getenv("api_key2"),
             api_version=os.getenv("azure_api_version"),
-            azure_endpoint=os.getenv("azure_api_endpoint")
-            )
+            azure_endpoint=os.getenv("azure_api_endpoint"),
+        )
         self.clients = [client1, client2, client3, client4, client5]
 
 
@@ -152,10 +162,7 @@ def llm_surf(llm_input: dict) -> str:
         if file_content:
             content += file_content + "\n"
 
-    if llm_input.get("new_message"):
-        content += llm_input.get("new_message") + "\n"
-    else:
-        content += fileProcessor.default_prompt + "\n"
+        llm_input["new_message"] += content
 
     # running in multi-agent mode
     if os.getenv("MODE") == "multi-agent":
