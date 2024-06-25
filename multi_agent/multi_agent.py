@@ -133,7 +133,8 @@ And Do not mention 'FINAL ANSWER' in final asnwer."""
             }
         else:
             self.output_json = {
-                "response": generated_messages[-1][k]["messages"][0].content
+                "response": generated_messages[-1][k]["messages"][0].content,
+                "chart_info": {}
             }
         
         return self.output_json

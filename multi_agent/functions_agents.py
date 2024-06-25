@@ -29,6 +29,7 @@ The user can set this parameter to now. In this situation this parameter's value
 
 	lookback: Optional[str] = Field(None, description="The number of seconds, minutes, hours, days, weeks, months or years to look back for calculating the trend of the given symbol. \
 This parameter determines the depth of historical data to be considered in the analysis. The format of this value must obey one of the following examples: 30 seconds, 10 minutes, 2 hours, 5 days, 3 weeks, 2 months and 3 years. \
+The user can also use the words last or past before the time unit which means one. (e.g. last day means 1 day, past week means 1 week, and etc.) \
 Either start_datetime along with end_datetime should be specified or lookback should be specified but both cases should not happen simultaneously.")
 
 class CalculateTrend(BaseTool):
@@ -36,6 +37,7 @@ class CalculateTrend(BaseTool):
 	description = """Analyzes the trend of a specified financial instrument over a given time range. \
 It is designed primarily for financial data analysis, enabling users to gauge the general direction of a security or market index. \
 Whether start_datetime with end_datetime, end_datetime with lookback or lookback parameters could be valued for determining the period over which's trend wants to be detected. \
+The user can also use the words last or past before the time unit which means one. \
 The function returns a numerical value that indicates the trend intensity and direction within the specified parameters. \
 Returns a number between -3 and 3 that represents the trend’s intensity and direction. The value is interpreted as follows: \
 \n -3: strong bearish (downward) trend \

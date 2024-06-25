@@ -156,14 +156,7 @@ def check_relevance(connector_surf, prompt: str):
 
 
 # class llm_surf:
-def llm_surf(llm_input: dict) -> str:
-
-    llm_output = {
-        "response": "",
-        "symbol": llm_input.get("symbol"),
-        "file": None,
-        "function_call": None,
-    }
+def llm_surf(llm_input: dict) -> dict:
 
     azure_connector_surf = AzureConnecttoSurf()
 
@@ -209,7 +202,8 @@ def llm_surf(llm_input: dict) -> str:
         llm_output["file"] = fileProcessor.text_to_speech(llm_output["response"])
 
     if "chart_info" in llm_output:
-        if "response" in llm_output["chart_info"]:
-            llm_output["response"] = llm_output["chart_info"]["response"]
-    
+        if not (llm_output["chart_info"] is None):
+            if "response" in llm_output["chart_info"]:
+                llm_output["response"] = llm_output["chart_info"]["response"]
+
     return llm_output
