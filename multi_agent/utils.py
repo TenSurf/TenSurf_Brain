@@ -177,7 +177,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             and calls that tool and
             returns the result."""
         messages = state["messages"]
-        last_message = messages[-1]
+        last_message = messages[-2]
         output_json = {}
         
         if "function_call" in last_message.additional_kwargs:
@@ -185,7 +185,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
                 last_message.additional_kwargs["function_call"]["arguments"]
             )
         else:
-            last_message = state["messages"][-2]
+            last_message = state["messages"][-1]
             tool_input = json.loads(
                 last_message.additional_kwargs["function_call"]["arguments"]
             )

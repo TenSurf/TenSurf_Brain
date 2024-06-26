@@ -173,6 +173,7 @@ Returns list of price for take-profit and information for each price For exampe:
 {'tp': [5139.25, 5140.25, 5144.0], 'info': ['calculated based on the level VWAP_Top_Band_2', 'calculated based on the level Overnight_high', 'calculated based on the level VWAP_Top_Band_3']}"""
 
 	args_schema: Type[BaseModel] = PropertiesCalculateTp
+	return_direct: bool = True
 
 	def _run(
         self, symbol: str = None, direction: int = None, stoploss: int = None
