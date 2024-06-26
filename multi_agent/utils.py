@@ -2,6 +2,7 @@ import os
 import json
 import operator
 from typing import Annotated, Sequence, TypedDict
+from uuid import UUID
 from openai import AzureOpenAI
 from langchain.tools.render import format_tool_to_openai_function
 from langchain_core.utils.function_calling import convert_to_openai_function
@@ -14,6 +15,7 @@ from langgraph.prebuilt.tool_executor import ToolInvocation
 
 from multi_agent.functions_agents import create_agent_tools
 import input_filter
+import config
 
 from langchain.tools.yahoo_finance_news import YahooFinanceNewsTool
 from langchain.text_splitter            import CharacterTextSplitter
@@ -24,6 +26,8 @@ from sec_api                            import QueryApi
 import requests
 import json
 from tokencost import count_message_tokens
+from langchain_core.callbacks import BaseCallbackHandler
+import typing
 
 
 class Utils:
@@ -63,7 +67,11 @@ class Utils:
         )
         prompt = prompt.partial(system_message=system_message)
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
-        return prompt | llm.bind_functions(functions)
+        chain = prompt | llm.bind_functions(functions)
+        callbacks = [ErrorHandler()]
+        chain_with_callbacks = chain.with_config(callbacks=callbacks)
+        # return chain
+        return chain_with_callbacks
 
     def agent_node(self, state, agent, name):
         result = agent.invoke(state)
@@ -177,10 +185,10 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
                 last_message.additional_kwargs["function_call"]["arguments"]
             )
         else:
-            function_message = FunctionMessage(
-                content=f"response: {last_message.content}"
+            last_message = state["messages"][-2]
+            tool_input = json.loads(
+                last_message.additional_kwargs["function_call"]["arguments"]
             )
-            return {"messages": [function_message], "output_json":output_json}
         
 
         if len(tool_input) == 1 and "__arg1" in tool_input:
@@ -364,7 +372,11 @@ def create_supervisor():
         ]
     )
 
-    return supervisor_prompt | llm
+    chain = supervisor_prompt | llm
+    callbacks = [ErrorHandler()]
+    chain_with_callbacks = chain.with_config(callbacks=callbacks)
+    # return chain
+    return chain_with_callbacks
 
 
 def supervisor_node(state):
@@ -395,7 +407,7 @@ def model_and_client_chooser(user_input, groqconnecttosurf):
             user_input, 
             # model='groq/llama3-70b-8192'
             model='azure/gpt-4o'
-            # model="gpt-3.5-turbo"
+            # model="gpt-3.5-turbo-0613"
         )
         if tokens < 8192:
             models = groqconnecttosurf.models_mid
@@ -404,3 +416,25 @@ def model_and_client_chooser(user_input, groqconnecttosurf):
             models = groqconnecttosurf.models_high
             clients = groqconnecttosurf.clients_high
     return models, clients, tokens
+
+
+class ErrorHandler(BaseCallbackHandler):
+    def on_llm_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"An llm error occured: {error}")
+        config.logging.error(f"An llm error occured: {error}")
+        return super().on_llm_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
+    
+    def on_tool_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"A tool error occured: {error}")
+        config.logging.error(f"A tool error occured: {error}")
+        return super().on_tool_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
+    
+    def on_chain_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"A chain error occured: {error}")
+        config.logging.error(f"A chain error occured: {error}")
+        return super().on_chain_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
+    
+    def on_retriever_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"A retriever error occured: {error}")
+        config.logging.error(f"A retriever error occured: {error}")
+        return super().on_retriever_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)

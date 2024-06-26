@@ -71,7 +71,7 @@ class ChatWithOpenai:
                 # calculating the cost
                 if model == "llama3-70b-8192":
                     # model = "groq/llama3-70b-8192"
-                    model = "gpt-3.5-turbo"
+                    model = "gpt-3.5-turbo-0613"
                 elif model == "gpt_35_16k":
                     model="azure/gpt-35-turbo-16k"
                 elif model == "gpt_4_32k":
