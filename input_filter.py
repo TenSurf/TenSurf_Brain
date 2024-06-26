@@ -240,7 +240,7 @@ def input_filter(function_name: str, function_arguments: dict, front_json: dict)
                 function_arguments["method"] = front_json["method"]
 
     else:
-        logging.info(f"Function name out of list: {function_name}")
+        logging.error(f"Function name out of list: {function_name}")
     
     return function_arguments
  
