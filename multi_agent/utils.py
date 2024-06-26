@@ -1,6 +1,8 @@
+import os
 import json
 import operator
 from typing import Annotated, Sequence, TypedDict
+from uuid import UUID
 from openai import AzureOpenAI
 from langchain.tools.render import format_tool_to_openai_function
 from langchain_core.utils.function_calling import convert_to_openai_function
@@ -13,6 +15,19 @@ from langgraph.prebuilt.tool_executor import ToolInvocation
 
 from multi_agent.functions_agents import create_agent_tools
 import input_filter
+import config
+
+from langchain.tools.yahoo_finance_news import YahooFinanceNewsTool
+from langchain.text_splitter            import CharacterTextSplitter
+from langchain.embeddings               import AzureOpenAIEmbeddings
+from langchain_community.vectorstores   import FAISS
+from unstructured.partition.html        import partition_html
+from sec_api                            import QueryApi
+import requests
+import json
+from tokencost import count_message_tokens
+from langchain_core.callbacks import BaseCallbackHandler
+import typing
 
 
 class Utils:
@@ -52,7 +67,11 @@ class Utils:
         )
         prompt = prompt.partial(system_message=system_message)
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
-        return prompt | llm.bind_functions(functions)
+        chain = prompt | llm.bind_functions(functions)
+        callbacks = [ErrorHandler()]
+        chain_with_callbacks = chain.with_config(callbacks=callbacks)
+        # return chain
+        return chain_with_callbacks
 
     def agent_node(self, state, agent, name):
         result = agent.invoke(state)
@@ -84,7 +103,7 @@ class Utils:
             tool_input=last_message.content,
         )
 
-        tool_executor, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
+        tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
         response = tool_executor.invoke(action)
         # print(response)
         standard_response = ""
@@ -131,7 +150,8 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
     def output_json_assigner(self, tool_name, response, symbol, input_json):
         output_json = {}
         if tool_name == "calculate_sr":
-            sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = response
+            print(f"\nresponse: {response}\n")
+            sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance, hard_coded_response = response
             output_json["levels_prices"] = sr_value
             output_json["levels_start_timestamps"] = sr_start_date
             output_json["levels_detect_timestamps"] = sr_detect_date
@@ -140,8 +160,15 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             output_json["function_name"] = tool_name
             output_json["symbol"] = symbol
             output_json["timeframe"] = input_json["timeframe"]
+            output_json["response"] = hard_coded_response
         if tool_name == "calculate_sl":
             output_json["stop_loss"] = response
+            output_json["symbol"] = symbol
+            output_json["timeframe"] = input_json["timeframe"]
+        if tool_name == "calculate_tp":
+            output_json["take_profit"] = response
+            output_json["symbol"] = symbol
+            output_json["timeframe"] = input_json["timeframe"]
         return output_json
 
     def tool_node(self, state):
@@ -151,10 +178,18 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             returns the result."""
         messages = state["messages"]
         last_message = messages[-1]
-        tool_input = json.loads(
-            last_message.additional_kwargs["function_call"]["arguments"]
-        )
         output_json = {}
+        
+        if "function_call" in last_message.additional_kwargs:
+            tool_input = json.loads(
+                last_message.additional_kwargs["function_call"]["arguments"]
+            )
+        else:
+            last_message = state["messages"][-2]
+            tool_input = json.loads(
+                last_message.additional_kwargs["function_call"]["arguments"]
+            )
+        
 
         if len(tool_input) == 1 and "__arg1" in tool_input:
             tool_input = next(iter(tool_input.values()))
@@ -179,7 +214,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
         else:
             state["input_json"].update(tool_input)
 
-        tool_executor, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
+        tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
         response = tool_executor.invoke(action)
         symbol = tool_input["symbol"]
         output_json = self.output_json_assigner(tool_name, response, symbol, state["input_json"])
@@ -226,6 +261,15 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
                 return "end"
 
         return "continue"
+    
+    def agent_router(self, state):
+        messages = state["messages"]
+        last_message = messages[-1]
+
+        if last_message.content == 'trading':
+            return 'Trading'
+        elif last_message.content == 'researcher':
+            return 'Researcher'
 
 
 class AgentState(TypedDict):
@@ -233,3 +277,164 @@ class AgentState(TypedDict):
     output_json: dict
     input_json: dict
     sender: str
+
+
+def download_form_html(url):
+    headers = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7',
+        'Cache-Control': 'max-age=0',
+        'Dnt': '1',
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"macOS"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+
+    response = requests.get(url, headers=headers)
+
+    return response.text
+
+
+def embedding_search(url, ask):
+    embeddings=AzureOpenAIEmbeddings(deployment="embedding-ada-002",
+                                model= "text-embedding-ada-002",
+                                azure_endpoint=os.getenv("azure_api_endpoint"),
+                                openai_api_type=os.getenv("openai_api_type"),
+                                chunk_size=1000)
+    text = download_form_html(url)
+    elements = partition_html(text=text)
+    content = "\n".join([str(el) for el in elements])
+    text_splitter = CharacterTextSplitter(
+        separator = "\n",
+        chunk_size = 1000,
+        chunk_overlap  = 150,
+        length_function = len,
+        is_separator_regex = False)
+    docs = text_splitter.create_documents([content])
+    retriever = FAISS.from_documents(docs, embeddings).as_retriever()
+    answers = retriever.get_relevant_documents(ask, top_k=4)
+    answers = "\n\n".join([a.page_content for a in answers])
+    return answers
+
+
+def create_supervisor():
+    llm = AzureChatOpenAI(
+                  api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                  api_version=os.getenv("azure_api_version"),
+                  azure_endpoint=os.getenv("azure_api_endpoint"),
+                  deployment_name="gpt_35_16k",
+                  temperature=0,
+                  streaming=True
+    )
+    
+    prompt_supervisor = """
+    You are a supervisor with the task of deciding between two agents.
+    Your input will be user prompts or requests, but keep in mind that you should not answer the user requests.
+    Your decision will be based on whether the input string pertains to the job of a trading agent or a
+    researcher agent.
+    Trading Agent:
+    The trading agent is an assistant equipped with the following capabilities provided by these tools:
+    Calculate support and resistance levels.
+    Calculate the trend of a specified financial instrument over a given time range and timeframe.
+    Calculate Take Profit (TP).
+    Calculate Stoploss (SL).
+    Detect trading bias.
+    The trading agent is not designed to answer general questions. It is the researcher's job to answer general questions.
+    The trading agent only responds to requests that can be answered based on its tools.
+    Researcher Agent:
+    The researcher agent is an assistant equipped with the following capabilities provided by these tools:
+    SearchInternet: Search the internet for relevant information.
+    NewsSearch: Search news sources for recent and historical news.
+    TenQ: Retrieve and analyze quarterly reports (10-Q) from SEC EDGAR.
+    TenK: Retrieve and analyze annual reports (10-K) from SEC EDGAR.
+    llm_Researcher: Conduct thorough research and provide detailed analysis.
+    The researcher agent is designed for answering general questions such as
+    'I want to buy some AAPL stock. When do you suggest I should buy it?
+    Based on the descriptions of these two agent,
+    you should choose between the researcher agent and the trading agent.
+    Your final answer will be either 'researcher' or 'trading'.
+    """
+
+    supervisor_prompt = ChatPromptTemplate.from_messages(
+        [
+        (
+            "system",
+            prompt_supervisor
+        ),
+        MessagesPlaceholder(variable_name="messages")
+        ]
+    )
+
+    chain = supervisor_prompt | llm
+    callbacks = [ErrorHandler()]
+    chain_with_callbacks = chain.with_config(callbacks=callbacks)
+    # return chain
+    return chain_with_callbacks
+
+
+def supervisor_node(state):
+    """This will help the graph flow to decide which agent should fulfill the task."""
+
+    messages = state["messages"]
+    supervisor = create_supervisor()
+    result = supervisor.invoke(messages)
+    result = HumanMessage(**result.dict(exclude={"type", "name"}))
+
+    return {
+        "messages": [result],
+        "sender": 'supervisor',
+    }
+
+
+def model_and_client_chooser(user_input, groqconnecttosurf):
+    tokens = count_message_tokens(
+        user_input, 
+        # model='azure/gpt-4o'
+        model="gpt-3.5-turbo-0613"
+    )
+    if tokens < 4096:
+        models = groqconnecttosurf.models_low
+        clients = groqconnecttosurf.clients_low
+    else:
+        tokens = count_message_tokens(
+            user_input, 
+            # model='groq/llama3-70b-8192'
+            model='azure/gpt-4o'
+            # model="gpt-3.5-turbo-0613"
+        )
+        if tokens < 8192:
+            models = groqconnecttosurf.models_mid
+            clients = groqconnecttosurf.clients_mid
+        else:
+            models = groqconnecttosurf.models_high
+            clients = groqconnecttosurf.clients_high
+    return models, clients, tokens
+
+
+class ErrorHandler(BaseCallbackHandler):
+    def on_llm_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"An llm error occured: {error}")
+        config.logging.error(f"An llm error occured: {error}")
+        return super().on_llm_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
+    
+    def on_tool_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"A tool error occured: {error}")
+        config.logging.error(f"A tool error occured: {error}")
+        return super().on_tool_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
+    
+    def on_chain_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"A chain error occured: {error}")
+        config.logging.error(f"A chain error occured: {error}")
+        return super().on_chain_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
+    
+    def on_retriever_error(self, error: BaseException, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: typing.Any) -> typing.Any:
+        print(f"A retriever error occured: {error}")
+        config.logging.error(f"A retriever error occured: {error}")
+        return super().on_retriever_error(error, run_id=run_id, parent_run_id=parent_run_id, **kwargs)

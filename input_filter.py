@@ -84,6 +84,9 @@ def input_filter(function_name: str, function_arguments: dict, front_json: dict)
         if "end_datetime" in function_arguments:            
             if function_arguments["end_datetime"] == "now":
                 function_arguments["end_datetime"] = now.strftime(date_format)
+        
+        if ("start_datetime" in function_arguments) and ("end_datetime" not in function_arguments):
+            function_arguments["end_datetime"] = now.strftime(date_format)
 
         if "start_datetime" in function_arguments or "end_datetime" in function_arguments:
             correct_dates = False
