@@ -17,3 +17,4 @@ groq
 langchain-openai==0.1.7
 pytz
 pandas
+yfinance
