@@ -13,39 +13,9 @@ from multi_agent.utils import model_and_client_chooser
 load_dotenv()
 DEBUG = (os.getenv('DEBUG', 'True') == 'True')
 
-# class ChatWithOpenai:
-#     def __init__(
-#         self,
-#         system_message,
-#         model,
-#         temperature,
-#         max_tokens,
-#         client,
-#         default_user_messages=None,
-#     ):
-#         self.system_message = system_message
-#         self.model = model
-#         self.temperature = temperature
-#         self.max_tokens = max_tokens
-#         azure_connectto_surf = AzureConnecttoSurf()
-#         self.client = azure_connectto_surf.client
-#         self.messages = [{"role": "system", "content": system_message}]
-#         if default_user_messages:
-#             for user_message in default_user_messages:
-#                 self.messages += [{"role": "user", "content": user_message}]
-
-#     def chat(self, user_input):
-#         response = self.client.chat.completions.create(
-#             model=self.model,
-#             messages=self.messages + user_input,
-#             temperature=self.temperature,
-#             max_tokens=self.max_tokens,
-#         )
-#         return response.choices[0].message.content
-
 
 class ChatWithOpenai:
-    def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None):
+    def __init__(self, system_message, chat_history, temperature=0, max_tokens=4096, default_user_messages=None):
         self.groqconnecttosurf = GroqConnecttoSurf()
         self.system_message = system_message
         self.temperature = temperature
@@ -54,6 +24,9 @@ class ChatWithOpenai:
         if default_user_messages:
             for user_message in default_user_messages:
                 self.messages += [{"role": "user", "content": user_message}]
+        if chat_history:
+            # TODO: Adding chat history to self.messages if needed
+            pass
 
     def chat(self, user_input):
 
