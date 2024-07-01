@@ -105,7 +105,7 @@ Returns a dictionary containing five lists, each corresponding to a specific asp
 		sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance = response
 		hard_coded_response = f"The support and resistance levels for {symbol} based on historical price data with a lookback period of {lookback_days} days and a timeframe of {timeframe} are as follows:\n\n- Levels: {sr_value}\n\nThese levels are determined based on historical price data and indicate areas where the price is likely to encounter support or resistance. The associated scores indicate the strength or significance of each level, with higher scores indicating stronger levels."
 
-		# return fc.calculate_sr(parameters)
+		# TODO: checking the output results
 		return sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance, hard_coded_response
 
 

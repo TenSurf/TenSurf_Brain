@@ -20,3 +20,4 @@ unstructured
 sec-api
 gpt-researcher
 tokencost
+langchain-mongodb
