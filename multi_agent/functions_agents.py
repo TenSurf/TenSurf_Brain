@@ -382,10 +382,11 @@ class Search10k(BaseTool):
 
 
 class Handlers:
-	def __init__(self, client, ChatWithOpenai):
+	def __init__(self, client, ChatWithOpenai, chat_history=None):
 		self.client = client
 		self.default_message = ["Check the following text for greeting words and do as the system message said."]
 		self.ChatWithOpenai = ChatWithOpenai
+		self.chat_history = chat_history
 
 	def handler_zero(self):
 		handler_zero_openai = self.ChatWithOpenai(system_message="You are an assistant. Your job is to check the user input Not answer it.\
@@ -411,6 +412,7 @@ Only perform the tasks instructed by system messages.",
 											temperature=0,
 											max_tokens=100,
 											# client=self.client
+											chat_history=self.chat_history
 											)
 		return handler_zero_openai
 
@@ -430,6 +432,7 @@ Only perform the tasks instructed by system messages.",
 											temperature=0,
 											max_tokens=100,
 											# client=self.client
+											chat_history=self.chat_history
 											)
 		return handler_one_openai
 
@@ -445,11 +448,12 @@ For example, the correct response to the question \
 									temperature=0,
 									max_tokens=100,
 									# client=self.client
+									chat_history=self.chat_history
 									)
 		return handler_two_openai
 
 
-def create_irrelavant_handler(client, ChatWithOpenai):
+def create_irrelavant_handler(client, ChatWithOpenai, chat_history):
 	######## Irrelevant Handler ########
 	class HandleIrrelevantSchema(BaseModel):
 		massage: str = Field(..., description="The humanmassage")
@@ -467,7 +471,7 @@ False: when the message request is not in these fields."""
 			self, massage: str
 		) -> dict:
 
-			handlers = Handlers(client=client, ChatWithOpenai=ChatWithOpenai)
+			handlers = Handlers(client=client, ChatWithOpenai=ChatWithOpenai, chat_history=chat_history)
 			user_input = [{"role": "user", "content": "'" + massage + "'"}]
 
 			handler_zero_openai = handlers.handler_zero()
@@ -489,7 +493,7 @@ False: when the message request is not in these fields."""
 	return Handler
 
 
-def create_agent_tools(client, ChatWithOpenai):
+def create_agent_tools(client, ChatWithOpenai, chat_history):
 
 	Trend = CalculateTrend()
 	SR = CalculateSR()
@@ -501,7 +505,7 @@ def create_agent_tools(client, ChatWithOpenai):
 	NewsSearch = SearchNews()
 	TenQ = Search10q()
 	Tenk = Search10k()
-	Handler = create_irrelavant_handler(client, ChatWithOpenai)
+	Handler = create_irrelavant_handler(client, ChatWithOpenai, chat_history)
 
 	tools = [Trend, SR, TP, SL, Bias, Handler, SearchInternet, NewsSearch, Tenk, TenQ, LLM_Researcher]
 	tool_executor = ToolExecutor(tools)

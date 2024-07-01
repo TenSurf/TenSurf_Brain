@@ -21,10 +21,15 @@ class ChatWithOpenai:
         self.system_message = system_message
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.messages = [{"role": "system", "content": system_message}]
+        self.chat_history = chat_history
+        self.messages = []
         if default_user_messages:
             for user_message in default_user_messages:
                 self.messages += [{"role": "user", "content": user_message}]
+        if chat_history:
+            self.messages = chat_history + [{"role": "system", "content": system_message}]
+        else:
+            self.messages = [{"role": "system", "content": system_message}]
 
     def chat(self, user_input):
         # choosing the list of models and clients based on the users token
@@ -127,14 +132,12 @@ def check_relevance(connector_surf, prompt: str):
 
 # class llm_surf:
 def llm_surf(llm_input: dict) -> dict:
-    config.logging.info(f"llm_input:    {llm_input}")
-    print(f"llm_input:    {llm_input}")
     azure_connector_surf = AzureConnecttoSurf()
     # db = database.Kafka(
     #     chat_session_id=llm_input["user_id"],
     #     bootstrap_servers="localhost:Plaintext Ports"
     #     )
-
+    messages = llm_input["history_message"]
     content = ""
     fileProcessor = FileProcessor(azure_connector_surf)
     if "file" in llm_input and llm_input["file"]:
@@ -152,7 +155,7 @@ def llm_surf(llm_input: dict) -> dict:
     # running in multi-agent mode
     if os.getenv("MODE") == "multi-agent":
         MA = Multi_Agent(
-            ChatWithOpenai=ChatWithOpenai, client=azure_connector_surf.client#, chat_history=db.get_history(10)
+            ChatWithOpenai=ChatWithOpenai, client=azure_connector_surf.client, chat_history=messages
         )
         graph = MA.initialize_graph()
         llm_output = MA.generate_multi_agent_answer(llm_input, graph)

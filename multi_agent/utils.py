@@ -31,7 +31,7 @@ import typing
 
 
 class Utils:
-    def __init__(self, ChatWithOpenai, client):
+    def __init__(self, ChatWithOpenai, client, chat_history=None):
         self.api_type = "azure"
         self.api_endpoint = 'https://tensurfbrain1.openai.azure.com/'
         self.api_version = '2023-10-01-preview'
@@ -46,6 +46,7 @@ class Utils:
         )
         self.client = client
         self.ChatWithOpenai = ChatWithOpenai
+        self.chat_history = chat_history
 
     def create_agent(self, llm, tools, system_message: str):
         """Create an agent."""
@@ -103,7 +104,7 @@ class Utils:
             tool_input=last_message.content,
         )
 
-        tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
+        tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai, chat_history=self.chat_history)
         response = tool_executor.invoke(action)
         # print(response)
         standard_response = ""
@@ -122,6 +123,7 @@ class Utils:
                                 temperature=0,
                                 max_tokens=100,
                                 # client=self.client
+                                chat_history=self.chat_history
                                 )
         input = [{"role": "user", "content": "Hi"}]
         response = greeting.chat(input)
@@ -213,7 +215,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
         else:
             state["input_json"].update(tool_input)
 
-        tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
+        tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai, chat_history=self.chat_history)
         # TODO: response for calculate_tp is an empty dictionary
         response = tool_executor.invoke(action)
         symbol = tool_input["symbol"]

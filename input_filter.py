@@ -71,6 +71,20 @@ front_end_json_sample = {
 }
 
 
+
+{
+    'symbol': 'NQ', 
+    'timeframe': '1min', 
+    'start_datetime': None, 
+    'end_datetime': None, 
+    'timezone': -210, 
+    'user_id': 24, 
+    'history_message': [{'role': 'user', 'content': 'nq'}, {'role': 'system', 'content': 'To provide you with the requested information or analysis regarding the NQ, I need more specific details. Please let me know what specific information or analysis you are looking for, such as support and resistance levels, trend analysis, stop-loss calculation, take-profit calculation, or trading bias detection.'}, {'role': 'user', 'content': 'what is the trend of nq for the past week?'}, {'role': 'system', 'content': 'Based on the analysis of the past week, the trend of NQ (Nasdaq 100) is without a significant trend. This means that there is no clear upward or downward movement in the price of NQ over the past week.'}, {'role': 'user', 'content': 'what is the sr of nq for the last 10 days'}, {'role': 'system', 'content': 'The support and resistance levels for nq based on historical price data with a lookback period of 10 days and a timeframe of 1min are as follows:\n\n- Levels: [218.95, 218.66, 217.09, 218.63, 216.65, 215.96, 215.82, 215.31, 215.3, 214.9, 206.59, 207.2, 207.8446, 207.86, 208.14, 208.51, 208.6, 208.61, 208.82, 208.9, 209.07, 209.08, 209.1, 209.11, 210.22, 210.3, 210.52, 210.64, 211.02, 211.76, 211.98, 212.08, 212.55, 214.86, 214.57, 214.33, 213.44, 213.5, 212.72, 213.43, 212.89, 213.3, 213.25, 213.12, 212.93, 212.94]\n\nThese levels are determined based on historical price data and indicate areas where the price is likely to encounter support or resistance. The associated scores indicate the strength or significance of each level, with higher scores indicating stronger levels.'}, {'role': 'user', 'content': 'Calculate Support and Resistance Levels of YM by looking back up to past 10 days and timeframe of 10 minutes.'}, {'role': 'system', 'content': 'The support and resistance levels for YM based on historical price data with a lookback period of 10 days and a timeframe of 10min are as follows:\n\n- Levels: [39999.0, 39928.0, 39911.0, 39839.0, 39843.0, 39819.0, 39574.0, 39284.0, 39560.0, 39481.0]\n\nThese levels are determined based on historical price data and indicate areas where the price is likely to encounter support or resistance. The associated scores indicate the strength or significance of each level, with higher scores indicating stronger levels.'}, {'role': 'user', 'content': 'hello'}, {'role': 'system', 'content': "I'm here to help with trading and financial market queries. If you think your ask relates to trading and isn't addressed, please report a bug using the bottom right panel."}], 
+    'new_message': 'heelllooowww', 
+    'file': None
+}
+
+
 front_json_keys = ["symbol", "start_datetime", "end_datetime", "end_datetime", "timeframe", "lookback_days", "direction", "method", "neighborhood", "atr_coef", "min_sl_ticks", "stoploss"]
 
 
