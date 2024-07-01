@@ -62,6 +62,7 @@ front_end_json_sample = {
 'end_datetime': 'May-5-2024 12:00:00',
 'timezone': -210,
 'user_id': 10,
+'session_id': 1,
 'history_message': [],
 'new_message': '',
 'file': '',

@@ -150,7 +150,6 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
     def output_json_assigner(self, tool_name, response, symbol, input_json):
         output_json = {}
         if tool_name == "calculate_sr":
-            print(f"\nresponse: {response}\n")
             sr_value, sr_start_date, sr_detect_date, sr_end_date, sr_importance, hard_coded_response = response
             output_json["levels_prices"] = sr_value
             output_json["levels_start_timestamps"] = sr_start_date

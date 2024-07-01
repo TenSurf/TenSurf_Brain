@@ -169,7 +169,7 @@ class CalculateTp(BaseTool):
 	name = "calculate_tp"
 	description = """Take profit (TP) is opposite of the stop-loss (SL) and is based on maximum reward that we intend to achieve from a trade. \
 It represents the price level at which a trader aims to close a position to secure profits before the market reverses. \
-Returns list of price for take-profit and information for each price For exampe: \
+Returns a list of price for take-profit and information for each price For exampe: \
 {'tp': [5139.25, 5140.25, 5144.0], 'info': ['calculated based on the level VWAP_Top_Band_2', 'calculated based on the level Overnight_high', 'calculated based on the level VWAP_Top_Band_3']}"""
 
 	args_schema: Type[BaseModel] = PropertiesCalculateTp
