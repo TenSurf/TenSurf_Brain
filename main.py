@@ -128,6 +128,7 @@ def check_relevance(connector_surf, prompt: str):
 # class llm_surf:
 def llm_surf(llm_input: dict) -> dict:
     config.logging.info(f"llm_input:    {llm_input}")
+    print(f"llm_input:    {llm_input}")
     azure_connector_surf = AzureConnecttoSurf()
     # db = database.Kafka(
     #     chat_session_id=llm_input["user_id"],
