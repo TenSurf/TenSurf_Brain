@@ -7,7 +7,7 @@ from multi_agent.functions_agents import create_agent_tools
 
 
 class Multi_Agent:
-    def __init__(self, ChatWithOpenai, client):
+    def __init__(self, ChatWithOpenai, client, chat_history=None):
         self.output_json = {}
         self.ChatWithOpenai = ChatWithOpenai
         self.client = client

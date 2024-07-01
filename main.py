@@ -9,43 +9,14 @@ from file_processor import FileProcessor
 from single_agent import Single_Agent
 from multi_agent import Multi_Agent
 from multi_agent.utils import model_and_client_chooser
+import database
 
 load_dotenv()
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-# class ChatWithOpenai:
-#     def __init__(
-#         self,
-#         system_message,
-#         model,
-#         temperature,
-#         max_tokens,
-#         client,
-#         default_user_messages=None,
-#     ):
-#         self.system_message = system_message
-#         self.model = model
-#         self.temperature = temperature
-#         self.max_tokens = max_tokens
-#         azure_connectto_surf = AzureConnecttoSurf()
-#         self.client = azure_connectto_surf.client
-#         self.messages = [{"role": "system", "content": system_message}]
-#         if default_user_messages:
-#             for user_message in default_user_messages:
-#                 self.messages += [{"role": "user", "content": user_message}]
-
-#     def chat(self, user_input):
-#         response = self.client.chat.completions.create(
-#             model=self.model,
-#             messages=self.messages + user_input,
-#             temperature=self.temperature,
-#             max_tokens=self.max_tokens,
-#         )
-#         return response.choices[0].message.content
-
 
 class ChatWithOpenai:
-    def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None):
+    def __init__(self, system_message, temperature=0, max_tokens=4096, default_user_messages=None, chat_history=None):
         self.groqconnecttosurf = GroqConnecttoSurf()
         self.system_message = system_message
         self.temperature = temperature
@@ -56,7 +27,6 @@ class ChatWithOpenai:
                 self.messages += [{"role": "user", "content": user_message}]
 
     def chat(self, user_input):
-
         # choosing the list of models and clients based on the users token
         models, clients, tokens = model_and_client_chooser(user_input, self.groqconnecttosurf)
         for client, model in zip(clients, models):
@@ -159,6 +129,10 @@ def check_relevance(connector_surf, prompt: str):
 def llm_surf(llm_input: dict) -> dict:
 
     azure_connector_surf = AzureConnecttoSurf()
+    # db = database.Kafka(
+    #     chat_session_id=llm_input["user_id"],
+    #     bootstrap_servers="localhost:Plaintext Ports"
+    #     )
 
     content = ""
     fileProcessor = FileProcessor(azure_connector_surf)
@@ -174,7 +148,7 @@ def llm_surf(llm_input: dict) -> dict:
     # running in multi-agent mode
     if os.getenv("MODE") == "multi-agent":
         MA = Multi_Agent(
-            ChatWithOpenai=ChatWithOpenai, client=azure_connector_surf.client
+            ChatWithOpenai=ChatWithOpenai, client=azure_connector_surf.client#, chat_history=db.get_history(10)
         )
         graph = MA.initialize_graph()
         llm_output = MA.generate_multi_agent_answer(llm_input, graph)
@@ -202,5 +176,9 @@ def llm_surf(llm_input: dict) -> dict:
         if not (llm_output["chart_info"] is None):
             if "response" in llm_output["chart_info"]:
                 llm_output["response"] = llm_output["chart_info"]["response"]
+
+    # # saving messages to database
+    # db.save_user_message(llm_input["new_message"])
+    # db.save_ai_message(llm_output["response"])
 
     return llm_output

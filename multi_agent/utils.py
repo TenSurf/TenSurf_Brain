@@ -215,6 +215,7 @@ Each tool is tailored to help you make smarter, faster, and more informed tradin
             state["input_json"].update(tool_input)
 
         tool_executor, _, _ = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
+        # TODO: response for calculate_tp is an empty dictionary
         response = tool_executor.invoke(action)
         symbol = tool_input["symbol"]
         output_json = self.output_json_assigner(tool_name, response, symbol, state["input_json"])

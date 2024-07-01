@@ -945,6 +945,7 @@ class FunctionCalls:
             data_index = data_dict['DateTime']
             return find_trend(data_dict, data_index, 0, len(data_index) - 1)
 
+    # TODO: checking the output values
     def calculate_sr(self, parameters):
         symbol = parameters["symbol"]
         timeframe = parameters["timeframe"]
