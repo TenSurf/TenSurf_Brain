@@ -19,7 +19,7 @@ from gpt_researcher import GPTResearcher
 
 ######## Trend Detection ########
 class PropertiesCalculateTrend(BaseModel):
-	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed.")
+	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed. The only allowed values for symbol with their complete forms are: NQ, ES, GC, CL, YM, RTY")
 
 	start_datetime: Optional[str] = Field(None, description="The start timestamp of period over which the analysis is done. \
 The format of the date should be in the following format %b-%d-%y %H:%M:%S like this example: May-1-2024 13:27:49")
@@ -70,7 +70,7 @@ Returns a number between -3 and 3 that represents the trend’s intensity and di
 
 ######## Calculate Support and Resistance ########
 class PropertiesCalculateSR(BaseModel):
-	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed.")
+	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed. The only allowed values for symbol with their complete forms are: NQ, ES, GC, CL, YM, RTY")
 	timeframe: Optional[str] = Field(None, description="Specifies the timeframe of the candlestick chart to be analyzed. \
 This parameter defines the granularity of the data used for calculating the levels. The only allowed formats would like 3h, 20min, 1d.")
 	lookback_days: Optional[str] = Field(None, description="The number of days to look back for calculating the support and resistance levels. \
@@ -111,7 +111,7 @@ Returns a dictionary containing five lists, each corresponding to a specific asp
 
 ######## Calculate Stop Loss ########
 class PropertiesCalculateSl(BaseModel):
-	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed.")
+	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed. The only allowed values for symbol with their complete forms are: NQ, ES, GC, CL, YM, RTY")
 
 	method: Optional[str] = Field(None, description="shows the method of SL calculation.")
 
@@ -159,7 +159,7 @@ It includes a list of stoplosses and the risk on them and finally the level or m
 
 ######## Calculate Take-Profit ########
 class PropertiesCalculateTp(BaseModel):
-	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed.")
+	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed. The only allowed values for symbol with their complete forms are: NQ, ES, GC, CL, YM, RTY")
 
 	direction: Optional[int] = Field(None, description="-1: means the user want to calculate stoploss for a short position. 1: means the user want to calculate stoploss for a long position")
 
@@ -191,7 +191,7 @@ Returns a list of price for take-profit and information for each price For examp
 
 ######## Bias Detection ########
 class PropertiesBiasDetection(BaseModel):
-	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed.")
+	symbol: Optional[str] = Field(None, description="The ticker symbol of the financial instrument to be analyzed. The only allowed values for symbol with their complete forms are: NQ, ES, GC, CL, YM, RTY")
 
 	method: Optional[str] = Field(None, description="The user can choose from different methods including MC, Zigzag trend, \
 Trend detection, weekly wvap, candle stick pattern, cross ma, vp detection ,power & counter ratio.")
