@@ -24,7 +24,15 @@ Trend: Calculate the trend of a specified financial instrument over a given time
 TP: Calculate Take profit (TP), \
 SL: Calculate Stoploss (SL), \
 Bias: Detecting trading bias. \
+hist: get historical price data of a ticker from yfinance (hist) \
+info: get information of a ticker from yfinance (info)\
+news: get news about a ticker from yfinance (news), \
+earnings: get earnings of a ticker from yfinance (earnings), \
 Note the following rules for result of each tool: \
+hist:Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. \
+info:Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. \
+news: Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. \
+earnings: Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms.\
 SR:Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. When you are showing the levels, do not mention their name. The final answer should also contain the following texts: These levels are determined based on historical price data and indicate areas where the price is likely to encounter support or resistance. The associated scores indicate the strength or significance of each level, with higher scores indicating stronger levels. \
 Trend:At any situations, never return the number which is the output of the Trend function. Instead, use its correcsponding explanation which is in the Trend tool's description. Make sure to mention the start_datetime and end_datetime or the lookback parameter. Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response. \
 TP: Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. Now generate a proper response. \
@@ -33,8 +41,27 @@ Bias: Do not mention the name of the parameters of the functions directly in the
         )
         trading_node = functools.partial(self.utils.agent_node, agent=trading_agent, name="Trading")
 
+#         _, yfinance_tools_list = create_agent_tools(client=self.client, ChatWithOpenai=self.ChatWithOpenai)
+#         yfinance_agent = self.utils.create_agent(
+#             self.utils.llm,
+#             yfinance_tools_list,
+#             #[hist, info, news, earnings]
+#             system_message="""You are an assistant with the following capabilities given to you by your tools:
+# hist: get historical price data of a ticker from yfinance (hist) \
+# info: get information of a ticker from yfinance (info)\
+# news: get news about a ticker from yfinance (news), \
+# earnings: get earnings of a ticker from yfinance (earnings), \
+# Note the following rules for result of each tool: \
+# hist:Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. \
+# info:Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. \
+# news: Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms. \
+# earnings: Do not mention the name of the parameters of the functions directly in the final answer. Instead, briefly explain them and use other meaningfuly related synonyms."""
+#         )
+#         yfinance_node = functools.partial(self.utils.agent_node, agent=yfinance_agent, name="yfinance")
+
         workflow = StateGraph(AgentState)
 
+        #workflow.add_node("yfinance", yfinance_node)
         workflow.add_node("Trading", trading_node)
         workflow.add_node("call_tool", self.utils.tool_node)
         workflow.add_node("Handler", self.utils.run_Handler)
